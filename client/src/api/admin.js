@@ -24,3 +24,13 @@ export async function reconcileStore(id, confirm = false) {
   const { data } = await client.post(`/dashboard/admin/stores/${id}/reconcile`, { confirm });
   return data.data;
 }
+
+export async function listCustomers({ search, limit } = {}) {
+  const { data } = await client.get('/dashboard/admin/customers', { params: { search, limit } });
+  return data.data.customers;
+}
+
+export async function getCustomer(id) {
+  const { data } = await client.get(`/dashboard/admin/customers/${id}`);
+  return data.data;
+}

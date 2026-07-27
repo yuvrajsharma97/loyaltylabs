@@ -21,6 +21,12 @@ function parseLimit(value) {
   return Math.min(Number.isNaN(parsed) || parsed <= 0 ? DEFAULT_LIST_LIMIT : parsed, MAX_LIST_LIMIT);
 }
 
+// Search input goes into a RegExp - escape it so a customer named "a.b" (or
+// someone probing the search box) can't inject regex syntax.
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * All stores platform-wide, regardless of discoverable/status (unlike the
  * public directory).
@@ -311,4 +317,90 @@ const reconcile = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { corrected: correctedIds.length } });
 });
 
-module.exports = { listStores, updateStoreStatus, getMetrics, listDisputes, reconcile };
+/**
+ * All customers platform-wide, with an optional case-insensitive search over
+ * name/email - each entry includes how many stores they belong to, since the
+ * per-store breakdown itself lives behind GET /admin/customers/:id.
+ * @route GET /admin/customers
+ * @access Private (super_admin)
+ * @query {string} [search]
+ * @query {number} [limit=50]
+ */
+const listCustomers = asyncHandler(async (req, res) => {
+  const filter = {};
+  if (req.query.search) {
+    const re = new RegExp(escapeRegex(req.query.search), 'i');
+    filter.$or = [{ name: re }, { email: re }];
+  }
+
+  const customers = await Customer.find(filter)
+    .select('name email phone emailVerified onboardingCompleted createdAt')
+    .sort({ createdAt: -1 })
+    .limit(parseLimit(req.query.limit));
+
+  const membershipCounts = await Membership.aggregate([
+    { $match: { customerId: { $in: customers.map((c) => c._id) } } },
+    { $group: { _id: '$customerId', count: { $sum: 1 } } }
+  ]);
+  const countByCustomerId = new Map(membershipCounts.map((m) => [String(m._id), m.count]));
+
+  res.json({
+    success: true,
+    data: {
+      customers: customers.map((c) => ({
+        ...c.toObject(),
+        membershipCount: countByCustomerId.get(String(c._id)) || 0
+      }))
+    }
+  });
+});
+
+/**
+ * One customer's profile plus every store membership (points balance,
+ * joined date, last activity) - the platform-wide equivalent of the
+ * customer's own GET /customers/me.
+ * @route GET /admin/customers/:id
+ * @access Private (super_admin)
+ */
+const getCustomer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) {
+    throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
+  }
+
+  const customer = await Customer.findById(id).select(
+    'name email phone emailVerified onboardingCompleted interests createdAt'
+  );
+  if (!customer) {
+    throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
+  }
+
+  const memberships = await Membership.find({ customerId: id })
+    .populate('storeId', 'name status')
+    .sort({ lastActivityAt: -1 });
+
+  res.json({
+    success: true,
+    data: {
+      customer,
+      memberships: memberships.map((m) => ({
+        storeId: m.storeId?._id,
+        storeName: m.storeId?.name || '(deleted store)',
+        storeStatus: m.storeId?.status,
+        pointsBalance: m.pointsBalance,
+        joinedAt: m.joinedAt,
+        lastActivityAt: m.lastActivityAt
+      }))
+    }
+  });
+});
+
+module.exports = {
+  listStores,
+  updateStoreStatus,
+  getMetrics,
+  listDisputes,
+  reconcile,
+  listCustomers,
+  getCustomer
+};

@@ -14,5 +14,7 @@ router.patch('/stores/:id/status', validate(schemas.updateStoreStatusSchema), ha
 router.get('/metrics', handler.getMetrics);
 router.get('/disputes', handler.listDisputes);
 router.post('/stores/:id/reconcile', validate(schemas.reconcileSchema), handler.reconcile);
+router.get('/customers', handler.listCustomers);
+router.get('/customers/:id', handler.getCustomer);
 
 module.exports = router;
