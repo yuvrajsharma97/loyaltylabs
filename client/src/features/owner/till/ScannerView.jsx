@@ -12,19 +12,31 @@ export default function ScannerView({ onDecode, onError, onCancel }) {
   useEffect(() => {
     const scanner = new Html5Qrcode(ELEMENT_ID);
     scannerRef.current = scanner;
-    let decoded = false;
+    let stopped = false;
+
+    // Html5Qrcode.stop() throws synchronously (not a rejected promise) when
+    // called on an already-stopped scanner - a plain .catch() on its return
+    // value can't catch that, since the throw happens before stop() returns
+    // anything to chain onto. The `stopped` flag avoids the redundant call
+    // altogether (decode callback stops it once; unmounting must not stop it
+    // again), and try/catch is the backstop that actually catches a sync throw.
+    const stopScanner = async () => {
+      if (stopped) return;
+      stopped = true;
+      try {
+        await scanner.stop();
+      } catch {
+        // Already stopped, or never finished starting - nothing to clean up.
+      }
+    };
 
     scanner
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-          if (decoded) return;
-          decoded = true;
-          scanner
-            .stop()
-            .catch(() => {})
-            .finally(() => onDecode(decodedText));
+          if (stopped) return;
+          stopScanner().finally(() => onDecode(decodedText));
         }
       )
       .catch((err) => {
@@ -32,7 +44,7 @@ export default function ScannerView({ onDecode, onError, onCancel }) {
       });
 
     return () => {
-      scannerRef.current?.stop().catch(() => {});
+      stopScanner();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

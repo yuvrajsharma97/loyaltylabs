@@ -11,6 +11,8 @@ import CustomerOnboarding from './features/onboarding/CustomerOnboarding';
 import StoreOnboarding from './features/onboarding/StoreOnboarding';
 import CustomerDashboard from './features/customer/CustomerDashboard';
 import OwnerDashboard from './features/owner/OwnerDashboard';
+import AdminSignInPage from './features/admin/AdminSignInPage';
+import AdminDashboard from './features/admin/AdminDashboard';
 
 function ThemeToggleButton() {
   const { theme, toggleTheme } = useTheme();
@@ -43,25 +45,6 @@ function RoleHomeRedirect() {
   return <Navigate to={path} replace />;
 }
 
-// Placeholder landing page - the admin dashboard hasn't been built yet
-// (customer/store-owner now have real dashboards below).
-function RolePlaceholder({ label }) {
-  const { logout } = useAuth();
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-lg bg-background text-on-surface font-body">
-      <h1 className="font-display text-display-md">{label}</h1>
-      <p className="text-on-surface-variant">This dashboard is built next.</p>
-      <button
-        type="button"
-        onClick={logout}
-        className="text-primary font-bold hover:underline"
-      >
-        Log out
-      </button>
-    </div>
-  );
-}
-
 function App() {
   useTheme();
 
@@ -73,6 +56,8 @@ function App() {
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/sign-up" element={<SignUpPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          {/* Not linked from any nav/UI - reachable only by typing the URL directly. */}
+          <Route path="/admin/login" element={<AdminSignInPage />} />
           <Route
             path="/onboarding/customer"
             element={
@@ -108,8 +93,8 @@ function App() {
           <Route
             path="/admin/*"
             element={
-              <ProtectedRoute role="super_admin">
-                <RolePlaceholder label="Admin dashboard" />
+              <ProtectedRoute role="super_admin" redirectTo="/admin/login">
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />
