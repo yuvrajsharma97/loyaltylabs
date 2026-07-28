@@ -3,14 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth, resolvePostAuthPath } from '../../shared/hooks/useAuth';
 import PasswordInput from '../../shared/components/PasswordInput';
+import GoogleSignInButton from '../../shared/components/GoogleSignInButton';
 
 export default function SignInPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [accountType, setAccountType] = useState('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +26,20 @@ export default function SignInPage() {
       toast.error(err.message || 'Something went wrong');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGoogleCredential = async (idToken) => {
+    setGoogleSubmitting(true);
+    try {
+      const { role } = await loginWithGoogle(idToken);
+      toast.success('Signed in');
+      const path = await resolvePostAuthPath(role);
+      navigate(path, { replace: true });
+    } catch (err) {
+      toast.error(err.message || 'Something went wrong');
+    } finally {
+      setGoogleSubmitting(false);
     }
   };
 
@@ -140,12 +156,7 @@ export default function SignInPage() {
                 </span>
                 <div className="flex-grow border-t border-outline-variant" />
               </div>
-              <button
-                type="button"
-                className="w-full bg-surface-container-lowest border border-outline-variant text-on-surface py-md rounded-lg flex items-center justify-center gap-md hover:bg-surface-container-low transition-colors active:scale-[0.98]"
-              >
-                <span className="font-body text-body-md font-medium">Continue with Google</span>
-              </button>
+              <GoogleSignInButton onCredential={handleGoogleCredential} disabled={googleSubmitting} />
             </>
           )}
 
