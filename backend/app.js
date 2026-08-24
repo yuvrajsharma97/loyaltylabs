@@ -31,6 +31,9 @@ app.use(
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 
+// Health check endpoint
+// This is used to check if the server is running and if the database connection is established.
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
