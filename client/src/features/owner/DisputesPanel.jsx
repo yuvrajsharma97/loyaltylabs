@@ -4,6 +4,8 @@ import * as disputesApi from '../../api/disputes';
 import { useAuth } from '../../shared/hooks/useAuth';
 import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
 import Pagination from '../../shared/components/Pagination';
+import TextArea from '../../shared/components/TextArea';
+import { LIMITS, validateText } from '../../shared/utils/validation';
 import ListPage from '../../shared/components/ListPage';
 import ScrollPanel from '../../shared/components/ScrollPanel';
 import { showSuccessToast } from '../../shared/utils/toast';
@@ -30,6 +32,7 @@ const DisputesPanel = () => {
   const [status, setStatus] = useState('open');
   const [resolvingDispute, setResolvingDispute] = useState(null);
   const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchPage = useCallback(
@@ -43,9 +46,13 @@ const DisputesPanel = () => {
 
   const handleResolve = async (event) => {
     event.preventDefault();
+    const problem = validateText(note, { label: 'Note', max: LIMITS.note });
+    setNoteError(problem);
+    if (problem) return;
+
     setIsSaving(true);
     try {
-      await disputesApi.resolveDispute(resolvingDispute._id, { ownerNote: note });
+      await disputesApi.resolveDispute(resolvingDispute._id, { ownerNote: note.trim() || undefined });
       setResolvingDispute(null);
       setNote('');
       reload();
@@ -100,13 +107,17 @@ const DisputesPanel = () => {
       )}
 
       <Modal isOpen={Boolean(resolvingDispute)} onClose={() => setResolvingDispute(null)} title="Resolve dispute">
-        <form onSubmit={handleResolve} className="flex flex-col gap-3">
-          <textarea
+        <form onSubmit={handleResolve} className="flex flex-col gap-3" noValidate>
+          <TextArea
+            label="What did you do about it? (optional)"
+            placeholder="e.g. Checked the till log and added the missing points."
+            maxLength={LIMITS.note}
             value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="What did you do about this? (optional)"
-            rows={4}
-            className="rounded-input border border-border bg-surface p-3 text-body text-text-primary outline-none focus:border-primary"
+            onChange={(event) => {
+              setNote(event.target.value);
+              setNoteError(null);
+            }}
+            error={noteError}
           />
           <Button type="submit" isLoading={isSaving}>
             Mark resolved

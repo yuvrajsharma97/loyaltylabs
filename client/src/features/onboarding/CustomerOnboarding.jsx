@@ -7,6 +7,7 @@ import Button from '../../shared/components/Button';
 import Input from '../../shared/components/Input';
 import Card from '../../shared/components/Card';
 import Icon from '../../shared/components/Icon';
+import { sanitizePhone, validatePhone } from '../../shared/utils/validation';
 
 const STEPS = ['Interests', 'Shops', 'Contact', 'Done'];
 
@@ -35,6 +36,7 @@ const CustomerOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [interests, setInterests] = useState([]);
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState(null);
   const [stores, setStores] = useState([]);
   const [joinedStoreIds, setJoinedStoreIds] = useState([]);
   const [isLoadingStores, setIsLoadingStores] = useState(false);
@@ -69,7 +71,7 @@ const CustomerOnboarding = () => {
   const handleFinish = async () => {
     setIsSubmitting(true);
     try {
-      await customerApi.updateMe({ interests, phone: phone || undefined, onboardingCompleted: true });
+      await customerApi.updateMe({ interests, phone: phone.trim() || undefined, onboardingCompleted: true });
       await refreshProfile();
       navigate('/customer/home');
     } finally {
@@ -151,8 +153,28 @@ const CustomerOnboarding = () => {
           <div className="flex flex-col gap-4">
             <h1 className="text-page-title text-text-primary">Stay in the loop</h1>
             <p className="text-body-sm text-text-secondary">Optional - add a phone number for updates.</p>
-            <Input label="Phone (optional)" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} />
-            <Button onClick={() => setCurrentStep(3)}>Continue</Button>
+            <Input
+              label="Phone (optional)"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="07700 900123"
+              value={phone}
+              onChange={(event) => {
+                setPhone(sanitizePhone(event.target.value));
+                setPhoneError(null);
+              }}
+              error={phoneError}
+            />
+            <Button
+              onClick={() => {
+                const problem = validatePhone(phone);
+                setPhoneError(problem);
+                if (!problem) setCurrentStep(3);
+              }}
+            >
+              Continue
+            </Button>
           </div>
         )}
 

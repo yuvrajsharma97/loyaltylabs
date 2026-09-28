@@ -1,10 +1,16 @@
 const { z } = require('zod');
-const { requiredString, enumField } = require('../../shared/utils/zodHelpers');
+const {
+  requiredString,
+  enumField,
+  phoneField,
+  personNameField,
+  textField
+} = require('../../shared/utils/zodHelpers');
 
 const updateProfileSchema = z
   .object({
-    name: z.string().trim().min(1, 'Name cannot be empty').max(80).optional(),
-    phone: z.string().optional(),
+    name: personNameField('name').optional(),
+    phone: phoneField().optional(),
     interests: z.array(z.enum(['cafe', 'retail', 'services', 'other'])).optional(),
     onboardingCompleted: z.boolean().optional()
   })
@@ -17,7 +23,7 @@ const createDisputeSchema = z.object({
     ['earn', 'redemption', 'reversal'],
     'transactionType must be earn, redemption, or reversal'
   ),
-  customerNote: requiredString('customerNote is required')
+  customerNote: textField('customerNote', 1000).pipe(requiredString('customerNote is required'))
 });
 
 module.exports = { updateProfileSchema, createDisputeSchema };

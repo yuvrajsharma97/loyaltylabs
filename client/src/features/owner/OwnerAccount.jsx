@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as authApi from '../../api/auth';
-import { showErrorToast, showSuccessToast } from '../../shared/utils/toast';
+import { showSuccessToast } from '../../shared/utils/toast';
+import { LIMITS, hasErrors, sanitizePhone, validatePersonName, validatePhone } from '../../shared/utils/validation';
 import Card from '../../shared/components/Card';
 import Input from '../../shared/components/Input';
 import Button from '../../shared/components/Button';
@@ -16,6 +17,7 @@ const OwnerAccount = () => {
   const [account, setAccount] = useState(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -34,10 +36,10 @@ const OwnerAccount = () => {
 
   const handleSave = async (event) => {
     event.preventDefault();
-    if (!name.trim()) {
-      showErrorToast('Name cannot be empty.');
-      return;
-    }
+    const nextErrors = { name: validatePersonName(name, { label: 'Your name' }), phone: validatePhone(phone) };
+    setErrors(nextErrors);
+    if (hasErrors(nextErrors)) return;
+
     setIsSaving(true);
     try {
       const updated = await authApi.updateAccount({ name: name.trim(), phone: phone.trim() });
@@ -59,14 +61,18 @@ const OwnerAccount = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSave} className="mt-5 flex flex-col gap-4">
+        <form onSubmit={handleSave} className="mt-5 flex flex-col gap-4" noValidate>
           <Input
             label="Your name"
             autoComplete="name"
+            maxLength={LIMITS.personName}
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              setErrors((current) => ({ ...current, name: undefined }));
+            }}
             className="w-full"
-            required
+            error={errors.name}
           />
           <div className="flex flex-col gap-1.5">
             <Input label="Email" type="email" value={account.email} disabled readOnly className="w-full" />
@@ -78,10 +84,16 @@ const OwnerAccount = () => {
           <Input
             label="Phone (optional)"
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
+            placeholder="07700 900123"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => {
+              setPhone(sanitizePhone(event.target.value));
+              setErrors((current) => ({ ...current, phone: undefined }));
+            }}
             className="w-full"
+            error={errors.phone}
           />
           <Button type="submit" isLoading={isSaving} disabled={!hasChanges} className="self-start">
             Save changes

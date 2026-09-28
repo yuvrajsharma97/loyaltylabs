@@ -3,6 +3,17 @@ import * as rewardsApi from '../../api/rewards';
 import { useAuth } from '../../shared/hooks/useAuth';
 import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
 import Pagination from '../../shared/components/Pagination';
+import TextArea from '../../shared/components/TextArea';
+import {
+  LIMITS,
+  NUMBER_RULES,
+  hasErrors,
+  sanitizeDecimal,
+  sanitizeInteger,
+  validateNumber,
+  validateText,
+  validateTitle,
+} from '../../shared/utils/validation';
 import ListPage from '../../shared/components/ListPage';
 import ScrollPanel from '../../shared/components/ScrollPanel';
 import { showSuccessToast } from '../../shared/utils/toast';
@@ -38,12 +49,28 @@ function describeReward(reward) {
   return 'Free item';
 }
 
-const EMPTY_FORM = { title: '', description: '', pointsRequired: 100, rewardType: 'free_item', value: '' };
+// Numbers are edited as strings and converted on save.
+const EMPTY_FORM = { title: '', description: '', pointsRequired: '100', rewardType: 'free_item', value: '' };
+
+function validateRewardForm(form) {
+  return {
+    title: validateTitle(form.title, { label: 'Title', max: LIMITS.rewardTitle }),
+    description: validateText(form.description, { label: 'Description', max: LIMITS.rewardDescription }),
+    pointsRequired: validateNumber(form.pointsRequired, NUMBER_RULES.rewardPoints),
+    value:
+      form.rewardType === 'discount_percent'
+        ? validateNumber(form.value, NUMBER_RULES.percentOff)
+        : form.rewardType === 'discount_fixed'
+          ? validateNumber(form.value, NUMBER_RULES.amountOff)
+          : null,
+  };
+}
 
 const Rewards = () => {
   const { user: store } = useAuth();
   const [editingReward, setEditingReward] = useState(null); // null = closed, {} = new, {...} = editing
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [deletingReward, setDeletingReward] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -58,8 +85,14 @@ const Rewards = () => {
   );
   const { items: rewards, pagination, setPage, isLoading, reload: loadRewards } = usePaginatedList(fetchPage);
 
+  const setField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFormErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
   const openCreate = () => {
     setForm(EMPTY_FORM);
+    setFormErrors({});
     setEditingReward({});
   };
 
@@ -67,23 +100,28 @@ const Rewards = () => {
     setForm({
       title: reward.title,
       description: reward.description || '',
-      pointsRequired: reward.pointsRequired,
+      pointsRequired: String(reward.pointsRequired),
       rewardType: reward.rewardType,
-      value: reward.value ?? '',
+      value: reward.value === null || reward.value === undefined ? '' : String(reward.value),
     });
+    setFormErrors({});
     setEditingReward(reward);
   };
 
   const handleSave = async (event) => {
     event.preventDefault();
+    const errors = validateRewardForm(form);
+    setFormErrors(errors);
+    if (hasErrors(errors)) return;
+
     setIsSaving(true);
     try {
       const payload = {
-        title: form.title,
-        description: form.description || undefined,
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
         pointsRequired: Number(form.pointsRequired),
         rewardType: form.rewardType,
-        value: form.value === '' ? undefined : Number(form.value),
+        value: form.rewardType === 'free_item' ? undefined : Number(form.value),
       };
 
       if (editingReward._id) {
@@ -205,26 +243,42 @@ const Rewards = () => {
       </Modal>
 
       <Modal isOpen={Boolean(editingReward)} onClose={() => setEditingReward(null)} title={editingReward?._id ? 'Edit reward' : 'New reward'}>
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <Input label="Title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required />
+        <form onSubmit={handleSave} className="flex flex-col gap-4" noValidate>
           <Input
+            label="Title"
+            placeholder="Free coffee"
+            maxLength={LIMITS.rewardTitle}
+            value={form.title}
+            onChange={(event) => setField('title', event.target.value)}
+            error={formErrors.title}
+          />
+          <TextArea
             label="Description (optional)"
+            rows={2}
+            maxLength={LIMITS.rewardDescription}
             value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
+            onChange={(event) => setField('description', event.target.value)}
+            error={formErrors.description}
           />
           <Input
             label="Points required"
-            type="number"
-            min="1"
+            inputMode="numeric"
             value={form.pointsRequired}
-            onChange={(event) => setForm({ ...form, pointsRequired: event.target.value })}
-            required
+            onChange={(event) => setField('pointsRequired', sanitizeInteger(event.target.value))}
+            error={formErrors.pointsRequired}
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-label text-text-secondary">Reward type</label>
+            <label htmlFor="reward-type" className="text-label text-text-secondary">
+              Reward type
+            </label>
             <select
+              id="reward-type"
               value={form.rewardType}
-              onChange={(event) => setForm({ ...form, rewardType: event.target.value })}
+              onChange={(event) => {
+                // The value's meaning changes with the type, so start it fresh.
+                setForm((current) => ({ ...current, rewardType: event.target.value, value: '' }));
+                setFormErrors((current) => ({ ...current, value: undefined }));
+              }}
               className="h-11 rounded-input border border-border bg-surface px-3 text-body text-text-primary outline-none focus:border-primary"
             >
               {REWARD_TYPES.map((type) => (
@@ -237,10 +291,19 @@ const Rewards = () => {
           {form.rewardType !== 'free_item' && (
             <Input
               label={form.rewardType === 'discount_percent' ? 'Percent off' : 'Amount off (£)'}
-              type="number"
-              min="0"
+              inputMode={form.rewardType === 'discount_percent' ? 'numeric' : 'decimal'}
+              placeholder={form.rewardType === 'discount_percent' ? '10' : '5.00'}
               value={form.value}
-              onChange={(event) => setForm({ ...form, value: event.target.value })}
+              onChange={(event) =>
+                setField(
+                  'value',
+                  form.rewardType === 'discount_percent'
+                    ? sanitizeInteger(event.target.value, 3)
+                    : sanitizeDecimal(event.target.value, { maxIntegerDigits: 5 })
+                )
+              }
+              error={formErrors.value}
+              hint={form.rewardType === 'discount_percent' ? 'Between 1 and 100.' : undefined}
             />
           )}
           <Button type="submit" isLoading={isSaving}>

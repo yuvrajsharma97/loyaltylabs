@@ -10,6 +10,7 @@ import Button from '../../shared/components/Button';
 import SegmentedControl from '../../shared/components/SegmentedControl';
 import GoogleSignInButton from '../../shared/components/GoogleSignInButton';
 import Modal from '../../shared/components/Modal';
+import { LIMITS, hasErrors, validateEmail } from '../../shared/utils/validation';
 
 const ACCOUNT_KINDS = [
   { value: 'customer', label: 'Customer' },
@@ -25,17 +26,24 @@ const SignInPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
-    setIsSubmitting(true);
 
+    // Only format checks here - strength rules apply when a password is set,
+    // not when signing in with an existing one.
+    const errors = { email: validateEmail(email), password: password ? null : 'Enter your password.' };
+    setFieldErrors(errors);
+    if (hasErrors(errors)) return;
+
+    setIsSubmitting(true);
     try {
       const accountType = accountKind === 'customer' ? 'customer' : 'user';
-      const session = await authApi.login({ email, password, accountType });
+      const session = await authApi.login({ email: email.trim(), password, accountType });
       await login(session);
       navigate('/');
     } catch (err) {
@@ -66,20 +74,28 @@ const SignInPage = () => {
         <SegmentedControl options={ACCOUNT_KINDS} value={accountKind} onChange={setAccountKind} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <Input
           label="Email"
           type="email"
           autoComplete="email"
+          maxLength={LIMITS.email}
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setFieldErrors((current) => ({ ...current, email: undefined }));
+          }}
+          error={fieldErrors.email}
         />
         <PasswordInput
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setFieldErrors((current) => ({ ...current, password: undefined }));
+          }}
           autoComplete="current-password"
-          required
+          maxLength={LIMITS.password}
+          error={fieldErrors.password}
         />
 
         {error && <p className="text-body-sm text-error-text">{error}</p>}
@@ -122,14 +138,19 @@ const SignInPage = () => {
 
 const ForgotPasswordModal = ({ isOpen, onClose, accountKind }) => {
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const problem = validateEmail(email);
+    setEmailError(problem);
+    if (problem) return;
+
     setIsSubmitting(true);
     try {
       const accountType = accountKind === 'customer' ? 'customer' : 'user';
-      await authApi.forgotPassword({ email, accountType });
+      await authApi.forgotPassword({ email: email.trim(), accountType });
       showSuccessToast('If that account exists, a reset link is on its way.');
       onClose();
     } finally {
@@ -139,16 +160,21 @@ const ForgotPasswordModal = ({ isOpen, onClose, accountKind }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Reset your password">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <p className="text-body-sm text-text-secondary">
           We&apos;ll email you a link to set a new password.
         </p>
         <Input
           label="Email"
           type="email"
+          autoComplete="email"
+          maxLength={LIMITS.email}
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setEmailError(null);
+          }}
+          error={emailError}
         />
         <Button type="submit" isLoading={isSubmitting}>
           Send reset link

@@ -8,6 +8,18 @@ import Input from '../../shared/components/Input';
 import SegmentedControl from '../../shared/components/SegmentedControl';
 import Icon from '../../shared/components/Icon';
 import { CATEGORIES } from '../../shared/utils/labels';
+import {
+  LIMITS,
+  NUMBER_RULES,
+  hasErrors,
+  sanitizeDecimal,
+  sanitizeInteger,
+  sanitizePin,
+  validateNumber,
+  validatePin,
+  validateText,
+  validateTitle,
+} from '../../shared/utils/validation';
 
 const STEPS = ['Profile', 'Earning', 'Till code', 'Reward', 'Live'];
 
@@ -33,16 +45,17 @@ const StoreOnboarding = () => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Step 1 - profile
   const [name, setName] = useState(store?.name || '');
   const [address, setAddress] = useState(store?.address || '');
   const [category, setCategory] = useState(store?.category || 'other');
 
-  // Step 2 - earning
+  // Step 2 - earning (kept as strings while typing; validated on Continue)
   const [mode, setMode] = useState('per_currency');
-  const [pointsPerUnit, setPointsPerUnit] = useState(1);
-  const [minPurchase, setMinPurchase] = useState(0);
+  const [pointsPerUnit, setPointsPerUnit] = useState('1');
+  const [minPurchase, setMinPurchase] = useState('');
 
   // Step 3 - till code
   const [tillPin, setTillPin] = useState('');
@@ -50,12 +63,26 @@ const StoreOnboarding = () => {
 
   // Step 4 - reward
   const [rewardTitle, setRewardTitle] = useState('');
-  const [rewardPoints, setRewardPoints] = useState(100);
+  const [rewardPoints, setRewardPoints] = useState('100');
+
+  const clearError = (field) => setErrors((current) => ({ ...current, [field]: undefined }));
+
+  // Validates one step's fields; returns true when they're all valid.
+  const checkStep = (stepErrors) => {
+    setErrors(stepErrors);
+    return !hasErrors(stepErrors);
+  };
 
   const handleSaveProfile = async () => {
+    const isValid = checkStep({
+      name: validateTitle(name, { label: 'Shop name' }),
+      address: validateText(address, { label: 'Address', max: LIMITS.address }),
+    });
+    if (!isValid) return;
+
     setIsSaving(true);
     try {
-      await storesApi.updateStore(store._id, { name, address, category });
+      await storesApi.updateStore(store._id, { name: name.trim(), address: address.trim(), category });
       setCurrentStep(1);
     } finally {
       setIsSaving(false);
@@ -63,13 +90,22 @@ const StoreOnboarding = () => {
   };
 
   const handleSaveEarning = async () => {
+    const isValid = checkStep({
+      pointsPerUnit: validateNumber(
+        pointsPerUnit,
+        mode === 'per_currency' ? NUMBER_RULES.pointsPerPound : NUMBER_RULES.pointsPerVisit
+      ),
+      minPurchase: mode === 'per_currency' ? validateNumber(minPurchase, NUMBER_RULES.minPurchase) : null,
+    });
+    if (!isValid) return;
+
     setIsSaving(true);
     try {
       await storesApi.updateLoyaltyConfig(store._id, {
         mode,
         pointsPerUnit: mode === 'per_currency' ? Number(pointsPerUnit) : undefined,
         fixedPointsPerVisit: mode === 'per_visit' ? Number(pointsPerUnit) : undefined,
-        minPurchase: Number(minPurchase),
+        minPurchase: mode === 'per_currency' ? Number(minPurchase) || 0 : 0,
       });
       await refreshProfile();
       setCurrentStep(2);
@@ -79,9 +115,15 @@ const StoreOnboarding = () => {
   };
 
   const handleSaveTillPin = async () => {
+    const isValid = checkStep({
+      tillLabel: validateTitle(tillLabel, { label: 'Till label', max: LIMITS.tillLabel }),
+      tillPin: validatePin(tillPin),
+    });
+    if (!isValid) return;
+
     setIsSaving(true);
     try {
-      await storesApi.updateTillPins(store._id, [{ pin: tillPin, label: tillLabel, active: true }]);
+      await storesApi.updateTillPins(store._id, [{ pin: tillPin, label: tillLabel.trim(), active: true }]);
       setCurrentStep(3);
     } finally {
       setIsSaving(false);
@@ -89,10 +131,16 @@ const StoreOnboarding = () => {
   };
 
   const handleSaveReward = async () => {
+    const isValid = checkStep({
+      rewardTitle: validateTitle(rewardTitle, { label: 'Reward title', max: LIMITS.rewardTitle }),
+      rewardPoints: validateNumber(rewardPoints, NUMBER_RULES.rewardPoints),
+    });
+    if (!isValid) return;
+
     setIsSaving(true);
     try {
       await rewardsApi.createReward(store._id, {
-        title: rewardTitle,
+        title: rewardTitle.trim(),
         pointsRequired: Number(rewardPoints),
         rewardType: 'free_item',
       });
@@ -114,8 +162,28 @@ const StoreOnboarding = () => {
         {currentStep === 0 && (
           <div className="flex flex-col gap-4">
             <h1 className="text-page-title text-text-primary">Tell us about your shop</h1>
-            <Input label="Shop name" value={name} onChange={(event) => setName(event.target.value)} required />
-            <Input label="Address" value={address} onChange={(event) => setAddress(event.target.value)} />
+            <Input
+              label="Shop name"
+              autoComplete="organization"
+              maxLength={LIMITS.storeName}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearError('name');
+              }}
+              error={errors.name}
+            />
+            <Input
+              label="Address (optional)"
+              autoComplete="street-address"
+              maxLength={LIMITS.address}
+              value={address}
+              onChange={(event) => {
+                setAddress(event.target.value);
+                clearError('address');
+              }}
+              error={errors.address}
+            />
             <div className="flex flex-col gap-1.5">
               <span className="text-label text-text-secondary">What kind of shop is it?</span>
               <div className="grid grid-cols-2 gap-2">
@@ -136,7 +204,7 @@ const StoreOnboarding = () => {
                 ))}
               </div>
             </div>
-            <Button isLoading={isSaving} disabled={!name.trim()} onClick={handleSaveProfile}>
+            <Button isLoading={isSaving} onClick={handleSaveProfile}>
               Continue
             </Button>
           </div>
@@ -145,21 +213,39 @@ const StoreOnboarding = () => {
         {currentStep === 1 && (
           <div className="flex flex-col gap-4">
             <h1 className="text-page-title text-text-primary">How do customers earn?</h1>
-            <SegmentedControl options={MODE_OPTIONS} value={mode} onChange={setMode} />
+            <SegmentedControl
+              options={MODE_OPTIONS}
+              value={mode}
+              onChange={(nextMode) => {
+                setMode(nextMode);
+                // Per-visit points are whole numbers; drop any decimals when switching.
+                if (nextMode === 'per_visit') setPointsPerUnit((current) => sanitizeInteger(current.split('.')[0]));
+                setErrors({});
+              }}
+            />
             <Input
               label={mode === 'per_currency' ? 'Points per £1 spent' : 'Points per visit'}
-              type="number"
-              min="0"
+              inputMode={mode === 'per_currency' ? 'decimal' : 'numeric'}
               value={pointsPerUnit}
-              onChange={(event) => setPointsPerUnit(event.target.value)}
+              onChange={(event) => {
+                setPointsPerUnit(
+                  mode === 'per_currency' ? sanitizeDecimal(event.target.value) : sanitizeInteger(event.target.value, 5)
+                );
+                clearError('pointsPerUnit');
+              }}
+              error={errors.pointsPerUnit}
             />
             {mode === 'per_currency' && (
               <Input
                 label="Minimum purchase (£, optional)"
-                type="number"
-                min="0"
+                inputMode="decimal"
+                placeholder="0.00"
                 value={minPurchase}
-                onChange={(event) => setMinPurchase(event.target.value)}
+                onChange={(event) => {
+                  setMinPurchase(sanitizeDecimal(event.target.value, { maxIntegerDigits: 5 }));
+                  clearError('minPurchase');
+                }}
+                error={errors.minPurchase}
               />
             )}
             <Button isLoading={isSaving} onClick={handleSaveEarning}>
@@ -175,15 +261,29 @@ const StoreOnboarding = () => {
               Staff enter this 4-digit code to award or redeem points at the till. You can add more later
               in Settings.
             </p>
-            <Input label="Till label" value={tillLabel} onChange={(event) => setTillLabel(event.target.value)} />
+            <Input
+              label="Till label"
+              maxLength={LIMITS.tillLabel}
+              value={tillLabel}
+              onChange={(event) => {
+                setTillLabel(event.target.value);
+                clearError('tillLabel');
+              }}
+              error={errors.tillLabel}
+            />
             <Input
               label="4-digit PIN"
               value={tillPin}
-              onChange={(event) => setTillPin(event.target.value.replace(/\D/g, '').slice(0, 4))}
+              onChange={(event) => {
+                setTillPin(sanitizePin(event.target.value));
+                clearError('tillPin');
+              }}
               inputMode="numeric"
-              required
+              autoComplete="off"
+              className="w-full font-mono tracking-[0.3em]"
+              error={errors.tillPin}
             />
-            <Button isLoading={isSaving} disabled={tillPin.length !== 4} onClick={handleSaveTillPin}>
+            <Button isLoading={isSaving} onClick={handleSaveTillPin}>
               Continue
             </Button>
           </div>
@@ -195,18 +295,25 @@ const StoreOnboarding = () => {
             <Input
               label="Reward title"
               placeholder="Free coffee"
+              maxLength={LIMITS.rewardTitle}
               value={rewardTitle}
-              onChange={(event) => setRewardTitle(event.target.value)}
-              required
+              onChange={(event) => {
+                setRewardTitle(event.target.value);
+                clearError('rewardTitle');
+              }}
+              error={errors.rewardTitle}
             />
             <Input
               label="Points required"
-              type="number"
-              min="1"
+              inputMode="numeric"
               value={rewardPoints}
-              onChange={(event) => setRewardPoints(event.target.value)}
+              onChange={(event) => {
+                setRewardPoints(sanitizeInteger(event.target.value));
+                clearError('rewardPoints');
+              }}
+              error={errors.rewardPoints}
             />
-            <Button isLoading={isSaving} disabled={!rewardTitle} onClick={handleSaveReward}>
+            <Button isLoading={isSaving} onClick={handleSaveReward}>
               Continue
             </Button>
           </div>

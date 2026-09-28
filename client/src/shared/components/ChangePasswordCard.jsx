@@ -5,14 +5,7 @@ import { showSuccessToast } from '../utils/toast';
 import Card from './Card';
 import Button from './Button';
 import PasswordInput from './PasswordInput';
-
-// Mirrors the backend's minimum bar (shared/utils/passwordStrength.js) so the
-// common mistakes are caught before a request is made.
-function getPasswordProblem(password) {
-  if (password.length < 8) return 'Use at least 8 characters.';
-  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) return 'Include at least one letter and one number.';
-  return null;
-}
+import { LIMITS, validatePassword } from '../utils/validation';
 
 const EMPTY_FORM = { currentPassword: '', newPassword: '', confirmPassword: '' };
 
@@ -34,7 +27,7 @@ const ChangePasswordCard = ({ hasPassword = true, onPasswordChanged }) => {
 
     const nextErrors = {};
     if (hasPassword && !form.currentPassword) nextErrors.currentPassword = 'Enter your current password.';
-    const problem = getPasswordProblem(form.newPassword);
+    const problem = validatePassword(form.newPassword, { label: 'New password' });
     if (problem) nextErrors.newPassword = problem;
     else if (hasPassword && form.newPassword === form.currentPassword) {
       nextErrors.newPassword = 'Choose a password different from your current one.';
@@ -80,6 +73,7 @@ const ChangePasswordCard = ({ hasPassword = true, onPasswordChanged }) => {
           <PasswordInput
             label="Current password"
             autoComplete="current-password"
+            maxLength={LIMITS.password}
             value={form.currentPassword}
             onChange={updateField('currentPassword')}
             error={errors.currentPassword}
@@ -88,6 +82,7 @@ const ChangePasswordCard = ({ hasPassword = true, onPasswordChanged }) => {
         <PasswordInput
           label="New password"
           autoComplete="new-password"
+          maxLength={LIMITS.password}
           value={form.newPassword}
           onChange={updateField('newPassword')}
           error={errors.newPassword}
@@ -95,6 +90,7 @@ const ChangePasswordCard = ({ hasPassword = true, onPasswordChanged }) => {
         <PasswordInput
           label="Confirm new password"
           autoComplete="new-password"
+          maxLength={LIMITS.password}
           value={form.confirmPassword}
           onChange={updateField('confirmPassword')}
           error={errors.confirmPassword}

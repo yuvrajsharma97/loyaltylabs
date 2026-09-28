@@ -9,6 +9,15 @@ import Avatar from '../../../shared/components/Avatar';
 import Icon from '../../../shared/components/Icon';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import { formatCurrency } from '../../../shared/utils/formatters';
+import {
+  LIMITS,
+  NUMBER_RULES,
+  sanitizeDecimal,
+  validateCustomerCode,
+  validateNumber,
+  validatePin,
+  validateRedemptionCode,
+} from '../../../shared/utils/validation';
 
 const PIN_ERROR_CODES = ['TILL_PIN_INVALID', 'TILL_PIN_REQUIRED'];
 const PIN_ERROR_MESSAGE = 'Incorrect till PIN - try again.';
@@ -63,8 +72,14 @@ const Till = () => {
 
   // Pounds and pence only: up to 5 digits, optional point, up to 2 decimals.
   const handleAmountChange = (event) => {
-    const next = event.target.value.replace(',', '.');
-    if (/^\d{0,5}(\.\d{0,2})?$/.test(next)) setAmountText(next);
+    setAmountText(sanitizeDecimal(event.target.value, { maxIntegerDigits: 5 }));
+    setActionError('');
+  };
+
+  // Shows a validation message in the step's error slot; returns true if valid.
+  const passes = (message) => {
+    if (message) setActionError(message);
+    return !message;
   };
 
   const goTo = (nextStep) => {
@@ -113,8 +128,9 @@ const Till = () => {
 
   const handleSlugSubmit = async (event) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setActionError('');
+    if (!passes(validateCustomerCode(slug) || validatePin(pin))) return;
+    setIsSubmitting(true);
     try {
       const result = await scanApi.identifyBySlug({ storeId: store._id, slug: slug.trim(), tillPin: pin });
       setCustomer(result);
@@ -133,9 +149,9 @@ const Till = () => {
 
   const handleConfirmEarn = async (event) => {
     event.preventDefault();
-    if (amountValue <= 0 || !isPinComplete) return;
-    setIsSubmitting(true);
     setActionError('');
+    if (!passes(validateNumber(amountText, NUMBER_RULES.purchaseAmount) || validatePin(pin))) return;
+    setIsSubmitting(true);
     try {
       const result = await scanApi.earn({
         storeId: store._id,
@@ -169,9 +185,9 @@ const Till = () => {
 
   const handleRedeemSubmit = async (event) => {
     event.preventDefault();
-    if (!isPinComplete) return;
-    setIsSubmitting(true);
     setActionError('');
+    if (!passes(validateRedemptionCode(redeemCode) || validatePin(pin))) return;
+    setIsSubmitting(true);
     try {
       const result = await scanApi.redeem({ storeId: store._id, redemptionCode: redeemCode.trim(), tillPin: pin });
       setRedeemResult(result);
@@ -237,17 +253,20 @@ const Till = () => {
     return (
       <div className="mx-auto max-w-xs px-4 py-12">
         <h1 className="mb-4 text-center text-page-title text-text-primary">Enter customer code</h1>
-        <form onSubmit={handleSlugSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSlugSubmit} className="flex flex-col gap-3" noValidate>
           <Input
             label="Customer code"
             placeholder="e.g. alex-chen-1a2b3c4d"
             value={slug}
-            onChange={(event) => setSlug(event.target.value)}
+            onChange={(event) => {
+              // Customer codes are lowercase letters, digits and dashes.
+              setSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, LIMITS.customerCode));
+              setActionError('');
+            }}
             autoFocus
             autoComplete="off"
             spellCheck={false}
             className="w-full"
-            required
           />
           <TillPinField value={pin} onChange={setPin} />
           {actionError && <p className="text-body-sm text-error-text">{actionError}</p>}
@@ -266,6 +285,7 @@ const Till = () => {
     return (
       <form
         onSubmit={handleConfirmEarn}
+        noValidate
         className="mx-auto flex max-w-xs flex-col items-center gap-4 px-4 py-8 text-center"
       >
         <div className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-3 text-left">
@@ -338,16 +358,19 @@ const Till = () => {
             <p className="my-4 text-center font-mono text-caption-mono uppercase text-text-muted">or type it in</p>
           </>
         )}
-        <form onSubmit={handleRedeemSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleRedeemSubmit} className="flex flex-col gap-3" noValidate>
           <Input
             label="Redemption code"
             value={redeemCode}
-            onChange={(event) => setRedeemCode(event.target.value)}
+            onChange={(event) => {
+              // Reward codes are hex strings.
+              setRedeemCode(event.target.value.replace(/[^a-f0-9]/gi, '').toLowerCase().slice(0, LIMITS.redemptionCode));
+              setActionError('');
+            }}
             autoFocus={!redeemCode}
             autoComplete="off"
             spellCheck={false}
             className="w-full font-mono"
-            required
           />
           <TillPinField value={pin} onChange={setPin} autoFocus={Boolean(redeemCode)} />
           {actionError && <p className="text-body-sm text-error-text">{actionError}</p>}

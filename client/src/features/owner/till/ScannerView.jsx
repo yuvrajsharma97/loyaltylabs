@@ -1,50 +1,76 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
-const SCANNER_ELEMENT_ID = 'till-qr-scanner';
+let scannerCount = 0;
 
 // Uses the imperative Html5Qrcode class so we control exactly when the camera
 // stops - it must stop before the identify call fires, not after.
+//
+// Two things make teardown tricky, and both caused a second live camera feed:
+//  - React StrictMode (dev) mounts, unmounts and re-mounts every component, so
+//    a first scanner is torn down while its camera is still starting.
+//  - stop() only works once start() has resolved; calling it earlier throws,
+//    and the camera then finishes starting with nothing left to stop it.
+// So each mount renders into its own child element, and cleanup waits for
+// start() to settle before stopping the camera and removing that element.
 const ScannerView = ({ onResult }) => {
+  const containerRef = useRef(null);
   const [cameraError, setCameraError] = useState(false);
 
   useEffect(() => {
-    const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
-    let isStopped = false;
+    const container = containerRef.current;
+    const element = document.createElement('div');
+    element.id = `till-qr-scanner-${(scannerCount += 1)}`;
+    container.appendChild(element);
 
-    // Html5Qrcode.stop() throws synchronously (not a rejected promise) when
-    // the scanner is already stopped or never finished starting, so a plain
-    // .catch() can't catch it. The flag avoids the redundant call; try/catch
-    // is the backstop for the sync throw.
-    const stopScanner = async () => {
-      if (isStopped) return;
-      isStopped = true;
-      try {
-        await scanner.stop();
-      } catch {
-        // Already stopped - nothing to clean up.
-      }
-    };
+    const scanner = new Html5Qrcode(element.id, { verbose: false });
+    let isDone = false; // a code was read, or the component unmounted
 
-    scanner
+    const startPromise = scanner
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: 240 },
         (decodedText) => {
-          if (isStopped) return;
-          stopScanner().finally(() => onResult(decodedText));
+          if (isDone) return;
+          isDone = true;
+          shutDown().then(() => onResult(decodedText));
         },
         () => {
           // Fires every frame with no code found - not an error, ignore.
         }
       )
       .catch(() => {
-        isStopped = true;
-        setCameraError(true);
+        if (!isDone) setCameraError(true);
       });
 
+    // Safe to call at any point: waits for start() to settle before stopping.
+    let shutDownPromise = null;
+    function shutDown() {
+      shutDownPromise ??= startPromise.then(async () => {
+        try {
+          if (scanner.isScanning) await scanner.stop();
+        } catch {
+          // Already stopped.
+        }
+        // Backstop: release any camera track still attached to the video, in
+        // case the library bailed out after opening the camera.
+        element.querySelector('video')?.srcObject?.getTracks().forEach((track) => track.stop());
+        try {
+          scanner.clear();
+        } catch {
+          // Nothing rendered to clear.
+        }
+      });
+      return shutDownPromise;
+    }
+
     return () => {
-      stopScanner();
+      isDone = true;
+      // Hide it straight away but keep its size - with display:none the
+      // library measures 0px, fails to start after already opening the camera,
+      // and never releases it.
+      element.style.cssText = 'position:absolute;inset:0;opacity:0;pointer-events:none';
+      shutDown().finally(() => element.remove());
     };
     // onResult identity changing shouldn't restart the camera stream.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,7 +84,7 @@ const ScannerView = ({ onResult }) => {
     );
   }
 
-  return <div id={SCANNER_ELEMENT_ID} className="mx-auto w-full max-w-xs overflow-hidden rounded-card" />;
+  return <div ref={containerRef} className="relative mx-auto w-full max-w-xs overflow-hidden rounded-card" />;
 };
 
 export default ScannerView;

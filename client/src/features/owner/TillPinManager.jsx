@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as storesApi from '../../api/stores';
 import { useAuth } from '../../shared/hooks/useAuth';
 import { showSuccessToast, showErrorToast } from '../../shared/utils/toast';
+import { LIMITS, hasErrors, sanitizePin, validatePin, validateTitle } from '../../shared/utils/validation';
 import Button from '../../shared/components/Button';
 import Input from '../../shared/components/Input';
 import ToggleSwitch from '../../shared/components/ToggleSwitch';
@@ -17,6 +18,7 @@ import LoadingSpinner from '../../shared/components/LoadingSpinner';
 const TillPinManager = () => {
   const { user: store } = useAuth();
   const [pins, setPins] = useState([]);
+  const [rowErrors, setRowErrors] = useState([]); // [{ label, pin }] per row
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -29,6 +31,7 @@ const TillPinManager = () => {
 
   const updatePin = (index, changes) => {
     setPins((current) => current.map((pin, i) => (i === index ? { ...pin, ...changes } : pin)));
+    setRowErrors((current) => current.map((errors, i) => (i === index ? {} : errors)));
   };
 
   const addPin = () => {
@@ -37,25 +40,27 @@ const TillPinManager = () => {
 
   const removePin = (index) => {
     setPins((current) => current.filter((_, i) => i !== index));
+    setRowErrors((current) => current.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
-    const seenPins = new Set();
-    for (const entry of pins) {
-      if (!/^\d{4}$/.test(entry.pin)) {
-        showErrorToast('Every PIN must be exactly 4 digits.');
-        return;
-      }
-      if (seenPins.has(entry.pin)) {
-        showErrorToast('PIN values must be unique.');
-        return;
-      }
-      seenPins.add(entry.pin);
+    const pinCounts = pins.reduce((counts, entry) => ({ ...counts, [entry.pin]: (counts[entry.pin] || 0) + 1 }), {});
+    const nextRowErrors = pins.map((entry) => ({
+      label: validateTitle(entry.label, { label: 'Label', max: LIMITS.tillLabel }),
+      pin: validatePin(entry.pin) || (pinCounts[entry.pin] > 1 ? 'Each PIN must be different.' : null),
+    }));
+    setRowErrors(nextRowErrors);
+    if (nextRowErrors.some(hasErrors)) {
+      showErrorToast('Fix the highlighted PINs before saving.');
+      return;
     }
 
     setIsSaving(true);
     try {
-      const { tillPins } = await storesApi.updateTillPins(store._id, pins);
+      const { tillPins } = await storesApi.updateTillPins(
+        store._id,
+        pins.map((entry) => ({ ...entry, label: entry.label.trim() }))
+      );
       setPins(tillPins);
       showSuccessToast('Till PINs updated.');
     } finally {
@@ -84,23 +89,28 @@ const TillPinManager = () => {
               <Input
                 label="Label"
                 placeholder="e.g. Front till"
+                maxLength={LIMITS.tillLabel}
                 value={entry.label}
                 onChange={(event) => updatePin(index, { label: event.target.value })}
                 className="w-full"
+                error={rowErrors[index]?.label}
               />
             </div>
             <div className="w-24 shrink-0">
+              {/* The column is too narrow for a message - it's shown under the row instead. */}
               <Input
                 label="PIN"
                 placeholder="0000"
                 value={entry.pin}
-                onChange={(event) => updatePin(index, { pin: event.target.value.replace(/\D/g, '').slice(0, 4) })}
+                onChange={(event) => updatePin(index, { pin: sanitizePin(event.target.value) })}
                 inputMode="numeric"
                 autoComplete="off"
                 className="w-full text-center font-mono tabular-nums tracking-[0.3em]"
+                error={Boolean(rowErrors[index]?.pin)}
               />
             </div>
           </div>
+          {rowErrors[index]?.pin && <p className="-mt-1 text-body-sm text-error-text">{rowErrors[index].pin}</p>}
 
           <div className="flex items-center justify-between border-t border-divider pt-3">
             <ToggleSwitch

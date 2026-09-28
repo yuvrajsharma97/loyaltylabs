@@ -9,6 +9,16 @@ import PasswordInput from '../../shared/components/PasswordInput';
 import Button from '../../shared/components/Button';
 import SegmentedControl from '../../shared/components/SegmentedControl';
 import Icon from '../../shared/components/Icon';
+import {
+  LIMITS,
+  hasErrors,
+  sanitizePhone,
+  validateEmail,
+  validatePassword,
+  validatePersonName,
+  validatePhone,
+  validateTitle,
+} from '../../shared/utils/validation';
 
 const ACCOUNT_KINDS = [
   { value: 'customer', label: 'Customer' },
@@ -27,30 +37,52 @@ const SignUpPage = () => {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+
+  const isStore = accountKind === 'store';
+
+  // Clears a field's error as soon as the user edits it.
+  const clearError = (field) => setFieldErrors((current) => ({ ...current, [field]: undefined }));
+
+  const validate = () => ({
+    // Store owners can fill their name and shop name in during onboarding.
+    name: validatePersonName(name, { label: isStore ? 'Your name' : 'Full name', required: !isStore }),
+    storeName: isStore ? validateTitle(storeName, { label: 'Store name', required: false }) : null,
+    email: validateEmail(email),
+    password: validatePassword(password),
+    phone: validatePhone(phone),
+  });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+
+    const errors = validate();
+    setFieldErrors(errors);
+    if (hasErrors(errors)) return;
+
+    const cleanEmail = email.trim();
+    const cleanPhone = phone.trim() || undefined;
     setIsSubmitting(true);
 
     try {
-      if (accountKind === 'customer') {
-        await authApi.registerCustomer({ name, email, password, phone: phone || undefined });
+      if (!isStore) {
+        await authApi.registerCustomer({ name: name.trim(), email: cleanEmail, password, phone: cleanPhone });
         setIsRegistered(true);
       } else {
         await authApi.registerStore({
-          ownerName: name || undefined,
-          storeName: storeName || undefined,
-          email,
+          ownerName: name.trim() || undefined,
+          storeName: storeName.trim() || undefined,
+          email: cleanEmail,
           password,
-          phone: phone || undefined,
+          phone: cleanPhone,
         });
         // Store-owner login isn't gated on email verification, so we can
         // sign them straight into onboarding instead of a "check your
         // email" holding screen.
-        const session = await authApi.login({ email, password, accountType: 'user' });
+        const session = await authApi.login({ email: cleanEmail, password, accountType: 'user' });
         await login(session);
         navigate('/onboarding/store');
       }
@@ -88,38 +120,79 @@ const SignUpPage = () => {
   return (
     <AuthCard title="Create your account">
       <div className="mb-5 flex justify-center">
-        <SegmentedControl options={ACCOUNT_KINDS} value={accountKind} onChange={setAccountKind} />
+        <SegmentedControl
+          options={ACCOUNT_KINDS}
+          value={accountKind}
+          onChange={(kind) => {
+            setAccountKind(kind);
+            setFieldErrors({});
+          }}
+        />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <Input
-          label={accountKind === 'customer' ? 'Full name' : 'Your name'}
+          label={isStore ? 'Your name (optional)' : 'Full name'}
+          autoComplete="name"
+          maxLength={LIMITS.personName}
           value={name}
-          onChange={(event) => setName(event.target.value)}
-          required={accountKind === 'customer'}
+          onChange={(event) => {
+            setName(event.target.value);
+            clearError('name');
+          }}
+          error={fieldErrors.name}
         />
-        {accountKind === 'store' && (
-          <Input label="Store name" value={storeName} onChange={(event) => setStoreName(event.target.value)} />
+        {isStore && (
+          <Input
+            label="Store name (optional)"
+            autoComplete="organization"
+            maxLength={LIMITS.storeName}
+            value={storeName}
+            onChange={(event) => {
+              setStoreName(event.target.value);
+              clearError('storeName');
+            }}
+            error={fieldErrors.storeName}
+            hint="You can add this during setup."
+          />
         )}
         <Input
           label="Email"
           type="email"
           autoComplete="email"
+          maxLength={LIMITS.email}
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
+          onChange={(event) => {
+            setEmail(event.target.value);
+            clearError('email');
+          }}
+          error={fieldErrors.email}
         />
         <PasswordInput
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            clearError('password');
+          }}
           autoComplete="new-password"
-          required
+          maxLength={LIMITS.password}
+          error={fieldErrors.password}
         />
+        {!fieldErrors.password && (
+          <p className="-mt-2 text-body-sm text-text-muted">At least 8 characters, with a letter and a number.</p>
+        )}
         <Input
           label="Phone (optional)"
           type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="07700 900123"
           value={phone}
-          onChange={(event) => setPhone(event.target.value)}
+          onChange={(event) => {
+            setPhone(sanitizePhone(event.target.value));
+            clearError('phone');
+          }}
+          error={fieldErrors.phone}
         />
 
         {error && <p className="text-body-sm text-error-text">{error}</p>}

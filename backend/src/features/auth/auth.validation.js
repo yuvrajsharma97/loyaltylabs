@@ -1,5 +1,17 @@
 const { z } = require('zod');
-const { requiredString, emailField, enumField } = require('../../shared/utils/zodHelpers');
+const {
+  requiredString,
+  emailField,
+  enumField,
+  phoneField,
+  personNameField,
+  titleField
+} = require('../../shared/utils/zodHelpers');
+
+// Strength is checked in the handlers (shared/utils/passwordStrength.js); this
+// just caps the length so an enormous string never reaches bcrypt.
+const passwordField = (name) =>
+  requiredString(`${name} is required`).max(128, `${name} must be 128 characters or fewer`);
 
 // `accountType` distinguishes the users collection (super_admin/store_owner)
 // from the customers collection - the plan calls this the "separate auth
@@ -7,10 +19,10 @@ const { requiredString, emailField, enumField } = require('../../shared/utils/zo
 const accountType = enumField(['user', 'customer'], 'accountType must be "user" or "customer"');
 
 const registerCustomerSchema = z.object({
-  name: requiredString('name is required'),
+  name: personNameField('name'),
   email: emailField(),
-  password: requiredString('password is required'),
-  phone: z.string().optional()
+  password: passwordField('password'),
+  phone: phoneField().optional()
 });
 
 const verifyEmailSchema = z.object({
@@ -31,16 +43,16 @@ const registerStoreSchema = z.object({
   // ownerName/storeName/phone are deliberately optional here - collected
   // during store onboarding instead, so sign-up only asks for email +
   // password. registerStore fills in placeholders when they're absent.
-  ownerName: z.string().optional(),
-  storeName: z.string().optional(),
+  ownerName: personNameField('ownerName').optional(),
+  storeName: titleField('storeName').optional(),
   email: emailField(),
-  password: requiredString('password is required'),
-  phone: z.string().optional()
+  password: passwordField('password'),
+  phone: phoneField().optional()
 });
 
 const loginSchema = z.object({
   email: emailField(),
-  password: requiredString('password is required'),
+  password: passwordField('password'),
   accountType
 });
 
@@ -55,7 +67,7 @@ const forgotPasswordSchema = z.object({
 
 const resetPasswordSchema = z.object({
   token: requiredString('token is required'),
-  newPassword: requiredString('newPassword is required'),
+  newPassword: passwordField('newPassword'),
   accountType
 });
 
@@ -71,16 +83,16 @@ const logoutSchema = z.object({
 // it's the login identity and gates verification/QR issuance.
 const updateAccountSchema = z
   .object({
-    name: z.string().trim().min(1, 'Name cannot be empty').max(80).optional(),
-    phone: z.string().trim().max(30).optional()
+    name: personNameField('name').optional(),
+    phone: phoneField().optional()
   })
   .refine((data) => Object.keys(data).length > 0, { error: 'At least one field must be provided' });
 
 // currentPassword is optional only for a Google-only customer who has never
 // set a password; the handler enforces it for everyone else.
 const changePasswordSchema = z.object({
-  currentPassword: z.string().optional(),
-  newPassword: requiredString('newPassword is required'),
+  currentPassword: z.string().max(128).optional(),
+  newPassword: passwordField('newPassword'),
   // The caller's own refresh token, so that session survives while every
   // other device is signed out.
   refreshToken: z.string().optional()

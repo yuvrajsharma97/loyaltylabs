@@ -6,6 +6,7 @@ const SearchInput = ({ className = '', ...props }) => {
       <Icon name="search" className="text-text-muted" />
       <input
         type="search"
+        maxLength={80}
         className={`h-full flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-muted ${className}`}
         {...props}
       />

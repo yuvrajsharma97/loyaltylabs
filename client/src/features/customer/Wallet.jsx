@@ -17,6 +17,8 @@ import { getTransactionLabel } from '../../shared/utils/labels';
 import { formatDateTime, formatSignedPoints } from '../../shared/utils/formatters';
 import Pagination from '../../shared/components/Pagination';
 import ScrollPanel from '../../shared/components/ScrollPanel';
+import TextArea from '../../shared/components/TextArea';
+import { LIMITS, validateText } from '../../shared/utils/validation';
 
 const PAGE_SIZE = 10;
 
@@ -209,17 +211,22 @@ const Wallet = () => {
 
 const DisputeModal = ({ entry, onClose }) => {
   const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const problem = validateText(note, { label: 'What went wrong', required: true, max: LIMITS.note });
+    setNoteError(problem);
+    if (problem) return;
+
     setIsSubmitting(true);
     try {
       await customerApi.createDispute({
         storeId: entry.transaction.storeId,
         transactionId: entry.disputeTarget.transactionId,
         transactionType: entry.disputeTarget.transactionType,
-        customerNote: note,
+        customerNote: note.trim(),
       });
       showSuccessToast('Dispute submitted - the shop will take a look.');
       setNote('');
@@ -231,14 +238,17 @@ const DisputeModal = ({ entry, onClose }) => {
 
   return (
     <Modal isOpen={Boolean(entry)} onClose={onClose} title="Flag this transaction">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <textarea
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+        <TextArea
+          label="What went wrong?"
+          placeholder="e.g. I spent £20 but only got 10 points."
+          maxLength={LIMITS.note}
           value={note}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder="What went wrong?"
-          rows={4}
-          required
-          className="rounded-input border border-border bg-surface p-3 text-body text-text-primary outline-none focus:border-primary"
+          onChange={(event) => {
+            setNote(event.target.value);
+            setNoteError(null);
+          }}
+          error={noteError}
         />
         <Button type="submit" isLoading={isSubmitting}>
           Submit

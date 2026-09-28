@@ -7,6 +7,7 @@ import Input from '../../shared/components/Input';
 import Button from '../../shared/components/Button';
 import Icon from '../../shared/components/Icon';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
+import { LIMITS, validateEmail } from '../../shared/utils/validation';
 
 const STATUS_CONTENT = {
   done: { icon: 'check_circle', title: 'Email verified', body: 'Your account is ready - you can sign in now.' },
@@ -36,11 +37,31 @@ const VerifyEmailPage = () => {
       });
   }, [token, accountType]);
 
+  const [emailError, setEmailError] = useState(null);
+
   const handleResend = async (event) => {
     event.preventDefault();
-    await authApi.resendVerification({ email, accountType });
+    const problem = validateEmail(email);
+    setEmailError(problem);
+    if (problem) return;
+    await authApi.resendVerification({ email: email.trim(), accountType });
     showSuccessToast('Verification email sent again.');
   };
+
+  const emailField = (
+    <Input
+      label="Email"
+      type="email"
+      autoComplete="email"
+      maxLength={LIMITS.email}
+      value={email}
+      onChange={(event) => {
+        setEmail(event.target.value);
+        setEmailError(null);
+      }}
+      error={emailError}
+    />
+  );
 
   if (status === 'working') {
     return (
@@ -53,8 +74,8 @@ const VerifyEmailPage = () => {
   if (status === 'pending') {
     return (
       <AuthCard title="Check your email" subtitle="Follow the link we sent you to verify your account.">
-        <form onSubmit={handleResend} className="flex flex-col gap-4">
-          <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        <form onSubmit={handleResend} className="flex flex-col gap-4" noValidate>
+          {emailField}
           <Button type="submit" variant="secondary">
             Resend email
           </Button>
@@ -80,8 +101,8 @@ const VerifyEmailPage = () => {
         <p className="text-body text-text-secondary">{content.body}</p>
 
         {(status === 'expired' || status === 'invalid') && (
-          <form onSubmit={handleResend} className="flex w-full flex-col gap-3">
-            <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <form onSubmit={handleResend} className="flex w-full flex-col gap-3 text-left" noValidate>
+            {emailField}
             <Button type="submit" variant="secondary">
               Send new link
             </Button>

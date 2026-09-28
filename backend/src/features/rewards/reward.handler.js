@@ -4,6 +4,7 @@ const { isValidObjectId } = require('../../shared/utils/objectId');
 const { parsePagination, paginateQuery } = require('../../shared/utils/pagination');
 
 const Reward = require('./reward.model');
+const { rewardValueProblem } = require('./reward.validation');
 const Store = require('../stores/store.model');
 const Redemption = require('../redemptions/redemption.model');
 
@@ -63,7 +64,13 @@ const listStoreRewards = asyncHandler(async (req, res) => {
  * @access Private (store_owner, owner of this store)
  */
 const createReward = asyncHandler(async (req, res) => {
-  const reward = await Reward.create({ ...req.body, storeId: req.store._id });
+  const { value, ...fields } = req.body;
+  // A free item carries no value.
+  const reward = await Reward.create({
+    ...fields,
+    value: fields.rewardType === 'free_item' ? null : value,
+    storeId: req.store._id
+  });
 
   if (!req.store.onboardingCompleted.firstRewardAdded) {
     req.store.onboardingCompleted.firstRewardAdded = true;
@@ -89,6 +96,14 @@ const updateReward = asyncHandler(async (req, res) => {
   }
 
   Object.assign(reward, req.body);
+  // A free item carries no value; switching to it clears any old discount.
+  if (reward.rewardType === 'free_item') reward.value = null;
+  const valueProblem = rewardValueProblem(reward.rewardType, reward.value);
+  if (valueProblem) {
+    throw new AppError('VALIDATION_ERROR', 'Request body failed validation', 400, {
+      errors: [{ field: 'value', message: valueProblem }]
+    });
+  }
   await reward.save();
 
   res.json({ success: true, data: reward });
