@@ -105,7 +105,7 @@ const WALLET_POINTS = [
 ];
 
 const WalletShowcase = () => (
-  <section className="relative overflow-hidden border-y border-border bg-surface px-4 py-14 sm:px-10 sm:py-20">
+  <section id="wallet" className="relative overflow-hidden border-y border-border bg-surface px-4 py-14 sm:px-10 sm:py-20">
     <GlowBackdrop />
     <div className="relative z-10 mx-auto flex max-w-[1200px] flex-col gap-8 sm:gap-10">
       <div className="mx-auto w-full overflow-hidden rounded-xl border border-border bg-[#EDF1F3] shadow-card sm:rounded-2xl sm:w-3/4">
@@ -237,7 +237,7 @@ const ISSUED = [1200, 1350, 1180, 1420, 1610, 1880, 1540, 1290, 1460, 1720, 1980
 const REDEEMED = [400, 520, 380, 610, 700, 880, 640, 420, 560, 720, 940, 660, 480, 600, 810, 1020, 700, 520, 640, 900, 1120, 760, 540, 660, 960, 1180, 840, 600, 700, 760];
 
 const AnalyticsShowcase = () => (
-  <section className="relative overflow-hidden border-y border-border bg-surface px-4 py-14 sm:px-10 sm:py-20">
+  <section id="analytics" className="relative overflow-hidden border-y border-border bg-surface px-4 py-14 sm:px-10 sm:py-20">
     <GlowBackdrop />
     <div className="relative z-10 mx-auto flex max-w-[1200px] flex-col gap-7 sm:gap-9">
       <div className="flex max-w-[640px] flex-col gap-2.5 sm:gap-3">
@@ -448,16 +448,36 @@ const ClosingCta = () => (
   </section>
 );
 
+// Only links that go somewhere real: sections on this page (href) or app
+// routes (to). Add Company/Legal columns back once those pages exist.
 const FOOTER_COLUMNS = [
-  { title: 'Product', links: ['How it works', 'For shops', 'For customers', 'Pricing'] },
-  { title: 'Company', links: ['About', 'Careers', 'Contact', 'Blog'] },
-  { title: 'Legal', links: ['Privacy', 'Terms', 'Cookies', 'Security'] },
+  {
+    title: 'Product',
+    links: [
+      { label: 'How it works', href: '#how' },
+      { label: 'Rewards wallet', href: '#wallet' },
+      { label: 'For shops', href: '#shops' },
+      { label: 'Shop analytics', href: '#analytics' },
+      { label: 'Pricing', href: '#pricing' },
+    ],
+  },
+  {
+    title: 'Get started',
+    links: [
+      { label: 'Join as a customer', to: '/sign-up' },
+      { label: 'Register your shop', to: '/sign-up?as=store' },
+      { label: 'Customer sign in', to: '/sign-in' },
+      { label: 'Shop owner sign in', to: '/sign-in?as=store' },
+    ],
+  },
 ];
+
+const FOOTER_LINK_CLASS = 'text-body-sm text-text-secondary hover:text-primary';
 
 const Footer = () => (
   <footer className="border-t border-border bg-canvas px-4 pb-8 pt-10 sm:px-10 sm:pb-10 sm:pt-12">
     <div className="mx-auto flex max-w-[1200px] flex-col gap-7 sm:gap-8">
-      <div className="grid grid-cols-1 gap-7 sm:grid-cols-4 sm:gap-6">
+      <div className="grid grid-cols-1 gap-7 sm:grid-cols-3 sm:gap-6">
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2">
             <span className="block h-5 w-5 rounded-[6px] bg-primary" />
@@ -465,15 +485,21 @@ const Footer = () => (
           </div>
           <span className="max-w-[26ch] text-body-sm text-text-muted">Digital loyalty for UK independents.</span>
         </div>
-        <div className="grid grid-cols-2 gap-6 sm:col-span-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-6 sm:col-span-2">
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.title} className="flex flex-col gap-2.5">
               <span className="font-mono text-[11.5px] uppercase tracking-[.08em] text-text-muted">{column.title}</span>
-              {column.links.map((link) => (
-                <a key={link} href="#0" className="text-body-sm text-text-secondary hover:text-primary">
-                  {link}
-                </a>
-              ))}
+              {column.links.map((link) =>
+                link.to ? (
+                  <Link key={link.label} to={link.to} className={FOOTER_LINK_CLASS}>
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a key={link.label} href={link.href} className={FOOTER_LINK_CLASS}>
+                    {link.label}
+                  </a>
+                )
+              )}
             </div>
           ))}
         </div>

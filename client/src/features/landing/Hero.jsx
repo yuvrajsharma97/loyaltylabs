@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+// Only links that go somewhere real - sections on this page (see ids in
+// LandingPage.jsx). Sign in / Join sit separately on the right.
 const NAV_ITEMS = [
-  { label: 'How it works', sub: ['Collect points', 'Claim rewards', 'Shop directory'] },
-  { label: 'For shops', sub: ['Set up stamps', 'Point of sale', 'Shop dashboard'] },
-  { label: 'Company', sub: ['Our story', 'Open roles', 'Reach us'] },
-  { label: 'Pricing', sub: [] },
+  { label: 'How it works', href: '#how' },
+  { label: 'Rewards wallet', href: '#wallet' },
+  { label: 'For shops', href: '#shops' },
+  { label: 'Pricing', href: '#pricing' },
 ];
 
 const ARROW_ICON = (
@@ -14,25 +16,7 @@ const ARROW_ICON = (
   </svg>
 );
 
-const ChevronIcon = ({ open }) => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="transition-transform duration-200"
-    style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-  >
-    <path d="M6 9l6 6 6-6" />
-  </svg>
-);
-
 const HeroNav = () => {
-  const [openItem, setOpenItem] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -44,36 +28,13 @@ const HeroNav = () => {
 
       <div className="hidden items-center gap-1 lg:flex">
         {NAV_ITEMS.map((item) => (
-          <div
-            key={item.label}
-            className="relative"
-            onMouseEnter={() => item.sub.length > 0 && setOpenItem(item.label)}
-            onMouseLeave={() => setOpenItem(null)}
+          <a
+            key={item.href}
+            href={item.href}
+            className="nav-item flex h-10 items-center whitespace-nowrap rounded-button px-3 text-body-sm font-medium text-text-secondary transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
           >
-            <button
-              type="button"
-              className="nav-item flex h-10 items-center gap-1.5 whitespace-nowrap rounded-button px-3 text-body-sm font-medium text-text-secondary transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
-            >
-              {item.label}
-              {item.sub.length > 0 && <ChevronIcon open={openItem === item.label} />}
-            </button>
-            {item.sub.length > 0 && openItem === item.label && (
-              <div
-                className="absolute left-0 top-full flex min-w-[180px] flex-col gap-0.5 rounded-xl border border-border bg-surface p-2 shadow-lift"
-                style={{ animation: 'dropdown-in .2s ease-out' }}
-              >
-                {item.sub.map((sub) => (
-                  <a
-                    key={sub}
-                    href="#0"
-                    className="rounded-lg px-2.5 py-2 text-body-sm font-medium text-text-secondary transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
-                  >
-                    {sub}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
+            {item.label}
+          </a>
         ))}
       </div>
 
@@ -141,22 +102,18 @@ const HeroNav = () => {
           pointerEvents: mobileOpen ? 'auto' : 'none',
         }}
       >
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 shadow-dialog">
+        <div className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-3 shadow-dialog">
           {NAV_ITEMS.map((item) => (
-            <div key={item.label}>
-              <div className="text-card-title text-text-primary">{item.label}</div>
-              {item.sub.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1.5 pl-3.5">
-                  {item.sub.map((sub) => (
-                    <a key={sub} href="#0" className="text-body-sm text-text-muted hover:text-primary-hover">
-                      {sub}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className="rounded-button px-2.5 py-2.5 text-card-title text-text-primary transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
+            >
+              {item.label}
+            </a>
           ))}
-          <div className="flex items-center gap-2.5 border-t border-border pt-4">
+          <div className="mt-2 flex items-center gap-2.5 border-t border-border px-2 pt-4">
             <Link
               to="/sign-in"
               className="flex h-[46px] flex-1 items-center justify-center rounded-button border border-[#CBDAD4] text-body-sm font-semibold text-primary-hover"

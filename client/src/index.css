@@ -292,20 +292,19 @@ button:disabled {
     transform: translateX(320%) skewX(-18deg);
   }
 }
-@keyframes dropdown-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+/* In-page anchor links (landing nav/footer: #how, #pricing, ...) glide to
+   their section instead of jumping - unless the user has asked for reduced
+   motion, in which case the jump stays instant. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
