@@ -1,6 +1,5 @@
-import client from './client';
+import apiClient from './client';
 
-export async function resolveDispute(disputeId, ownerNote) {
-  const { data } = await client.patch(`/dashboard/store/disputes/${disputeId}`, { ownerNote });
-  return data.data;
+export function resolveDispute(disputeId, { ownerNote } = {}) {
+  return apiClient.patch(`/dashboard/store/disputes/${disputeId}`, { ownerNote });
 }

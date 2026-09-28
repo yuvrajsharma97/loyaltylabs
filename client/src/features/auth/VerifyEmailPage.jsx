@@ -1,126 +1,99 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { verifyEmail, resendVerification } from '../../api/auth';
+import * as authApi from '../../api/auth';
+import { showSuccessToast } from '../../shared/utils/toast';
+import AuthCard from './AuthCard';
+import Input from '../../shared/components/Input';
+import Button from '../../shared/components/Button';
+import Icon from '../../shared/components/Icon';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 
-const VALID_ACCOUNT_TYPES = ['customer', 'user'];
+const STATUS_CONTENT = {
+  done: { icon: 'check_circle', title: 'Email verified', body: 'Your account is ready - you can sign in now.' },
+  already: { icon: 'check_circle', title: 'Already verified', body: 'This account is already verified - just sign in.' },
+  expired: { icon: 'error', title: 'Link expired', body: 'That verification link has expired. Send a new one below.' },
+  invalid: { icon: 'error', title: 'Link invalid', body: 'That verification link isn’t valid. Send a new one below.' },
+};
 
-export default function VerifyEmailPage() {
+const VerifyEmailPage = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const accountType = searchParams.get('accountType');
+  const accountType = searchParams.get('accountType') || 'customer';
 
-  const linkLooksValid = Boolean(token) && VALID_ACCOUNT_TYPES.includes(accountType);
-
-  // verifying | success | already-verified | problem
-  const [status, setStatus] = useState(() => (linkLooksValid ? 'verifying' : 'problem'));
-  const [problemMessage, setProblemMessage] = useState(() =>
-    linkLooksValid ? '' : 'This verification link is invalid.'
-  );
-  const [email, setEmail] = useState('');
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [status, setStatus] = useState(token ? 'working' : 'pending');
+  const [email, setEmail] = useState(searchParams.get('email') || '');
 
   useEffect(() => {
-    if (!linkLooksValid) return;
+    if (!token) return;
 
-    verifyEmail({ token, accountType })
-      .then(() => setStatus('success'))
+    authApi
+      .verifyEmail({ token, accountType })
+      .then(() => setStatus('done'))
       .catch((err) => {
-        if (err.code === 'ALREADY_VERIFIED') {
-          setStatus('already-verified');
-        } else {
-          setStatus('problem');
-          setProblemMessage(err.message || 'This verification link is invalid or has expired.');
-        }
+        if (err.code === 'ALREADY_VERIFIED') setStatus('already');
+        else if (err.code === 'LINK_EXPIRED') setStatus('expired');
+        else setStatus('invalid');
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token, accountType]);
 
-  const handleResend = async (e) => {
-    e.preventDefault();
-    setResending(true);
-    try {
-      await resendVerification({ email, accountType });
-      setResent(true);
-    } catch (err) {
-      toast.error(err.message || 'Could not send a new link');
-    } finally {
-      setResending(false);
-    }
+  const handleResend = async (event) => {
+    event.preventDefault();
+    await authApi.resendVerification({ email, accountType });
+    showSuccessToast('Verification email sent again.');
   };
 
+  if (status === 'working') {
+    return (
+      <AuthCard title="Verifying...">
+        <LoadingSpinner />
+      </AuthCard>
+    );
+  }
+
+  if (status === 'pending') {
+    return (
+      <AuthCard title="Check your email" subtitle="Follow the link we sent you to verify your account.">
+        <form onSubmit={handleResend} className="flex flex-col gap-4">
+          <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <Button type="submit" variant="secondary">
+            Resend email
+          </Button>
+        </form>
+        <Link to="/sign-in" className="mt-6 block text-center text-body-sm text-primary">
+          Back to sign in
+        </Link>
+      </AuthCard>
+    );
+  }
+
+  const content = STATUS_CONTENT[status];
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-on-surface font-body px-container-margin text-center gap-lg">
-      {status === 'verifying' && (
-        <>
-          <LoadingSpinner />
-          <h1 className="font-display text-display-md">Verifying your email...</h1>
-        </>
-      )}
+    <AuthCard title={content.title}>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Icon
+          name={content.icon}
+          isFilled
+          className={status === 'done' || status === 'already' ? 'text-success' : 'text-error'}
+          style={{ fontSize: '2rem' }}
+        />
+        <p className="text-body text-text-secondary">{content.body}</p>
 
-      {status === 'success' && (
-        <>
-          <span className="material-symbols-outlined text-primary text-[56px]">verified</span>
-          <h1 className="font-display text-display-md">Email verified</h1>
-          <p className="font-body text-body-md text-on-surface-variant max-w-[24rem]">
-            Your account is active. You can sign in now.
-          </p>
-          <Link to="/sign-in" className="text-primary font-bold hover:underline">
-            Continue to sign in
-          </Link>
-        </>
-      )}
+        {(status === 'expired' || status === 'invalid') && (
+          <form onSubmit={handleResend} className="flex w-full flex-col gap-3">
+            <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <Button type="submit" variant="secondary">
+              Send new link
+            </Button>
+          </form>
+        )}
 
-      {status === 'already-verified' && (
-        <>
-          <span className="material-symbols-outlined text-primary text-[56px]">verified</span>
-          <h1 className="font-display text-display-md">Already verified</h1>
-          <p className="font-body text-body-md text-on-surface-variant max-w-[24rem]">
-            This email address is already verified - you can sign in.
-          </p>
-          <Link to="/sign-in" className="text-primary font-bold hover:underline">
-            Continue to sign in
-          </Link>
-        </>
-      )}
-
-      {status === 'problem' && (
-        <>
-          <span className="material-symbols-outlined text-error text-[56px]">error</span>
-          <h1 className="font-display text-display-md">Link expired or invalid</h1>
-          <p className="font-body text-body-md text-on-surface-variant max-w-[24rem]">{problemMessage}</p>
-
-          {resent ? (
-            <p className="font-body text-body-md text-on-surface-variant max-w-[24rem]">
-              If an account exists for that address, a new link is on its way.
-            </p>
-          ) : VALID_ACCOUNT_TYPES.includes(accountType) ? (
-            <form onSubmit={handleResend} className="w-full max-w-[360px] flex flex-col gap-md">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-md font-body text-body-md placeholder:text-outline outline-none focus:border-primary transition-all"
-              />
-              <button
-                type="submit"
-                disabled={resending}
-                className="w-full bg-primary text-on-primary py-md rounded-lg font-bold hover:shadow-md active:scale-[0.98] transition-all disabled:opacity-60"
-              >
-                {resending ? 'Sending...' : 'Send a new link'}
-              </button>
-            </form>
-          ) : (
-            <Link to="/sign-in" className="text-primary font-bold hover:underline">
-              Back to sign in
-            </Link>
-          )}
-        </>
-      )}
-    </div>
+        <Link to="/sign-in" className="text-body-sm text-primary">
+          Back to sign in
+        </Link>
+      </div>
+    </AuthCard>
   );
-}
+};
+
+export default VerifyEmailPage;

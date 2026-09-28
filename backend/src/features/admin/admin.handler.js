@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const AppError = require('../../shared/utils/AppError');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const { isValidObjectId } = require('../../shared/utils/objectId');
+const { parsePagination, paginateQuery, escapeRegex } = require('../../shared/utils/pagination');
 const writeAuditLog = require('../../shared/services/writeAuditLog');
 
 const Store = require('../stores/store.model');
@@ -13,36 +14,29 @@ const Dispute = require('../disputes/dispute.model');
 const { StoreBilling, UsageSnapshot } = require('../billing/billing.model');
 const ReconciliationLog = require('./reconciliationLog.model');
 
-const DEFAULT_LIST_LIMIT = 50;
-const MAX_LIST_LIMIT = 200;
-
-function parseLimit(value) {
-  const parsed = parseInt(value, 10);
-  return Math.min(Number.isNaN(parsed) || parsed <= 0 ? DEFAULT_LIST_LIMIT : parsed, MAX_LIST_LIMIT);
-}
-
-// Search input goes into a RegExp - escape it so a customer named "a.b" (or
-// someone probing the search box) can't inject regex syntax.
-function escapeRegex(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
  * All stores platform-wide, regardless of discoverable/status (unlike the
  * public directory).
  * @route GET /admin/stores
  * @access Private (super_admin)
  * @query {'active'|'suspended'} [status]
- * @query {number} [limit=50]
+ * @query {string} [search] - case-insensitive name match
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const listStores = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.status === 'active' || req.query.status === 'suspended') {
     filter.status = req.query.status;
   }
+  if (req.query.search) {
+    filter.name = new RegExp(escapeRegex(req.query.search.trim()), 'i');
+  }
 
-  const stores = await Store.find(filter).sort({ createdAt: -1 }).limit(parseLimit(req.query.limit));
-  res.json({ success: true, data: { stores } });
+  const { items: stores, pagination } = await paginateQuery(Store, filter, parsePagination(req.query), {
+    sort: { createdAt: -1, _id: -1 }
+  });
+  res.json({ success: true, data: { stores, pagination } });
 });
 
 /**
@@ -210,7 +204,8 @@ const getMetrics = asyncHandler(async (req, res) => {
  * @route GET /admin/disputes
  * @access Private (super_admin)
  * @query {'open'|'resolved'|'all'} [status=open]
- * @query {number} [limit=50]
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const listDisputes = asyncHandler(async (req, res) => {
   const filter = {};
@@ -220,8 +215,10 @@ const listDisputes = asyncHandler(async (req, res) => {
     filter.status = 'open';
   }
 
-  const disputes = await Dispute.find(filter).sort({ createdAt: -1 }).limit(parseLimit(req.query.limit));
-  res.json({ success: true, data: { disputes } });
+  const { items: disputes, pagination } = await paginateQuery(Dispute, filter, parsePagination(req.query), {
+    sort: { createdAt: -1, _id: -1 }
+  });
+  res.json({ success: true, data: { disputes, pagination } });
 });
 
 /**
@@ -324,19 +321,20 @@ const reconcile = asyncHandler(async (req, res) => {
  * @route GET /admin/customers
  * @access Private (super_admin)
  * @query {string} [search]
- * @query {number} [limit=50]
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const listCustomers = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.search) {
-    const re = new RegExp(escapeRegex(req.query.search), 'i');
+    const re = new RegExp(escapeRegex(req.query.search.trim()), 'i');
     filter.$or = [{ name: re }, { email: re }];
   }
 
-  const customers = await Customer.find(filter)
-    .select('name email phone emailVerified onboardingCompleted createdAt')
-    .sort({ createdAt: -1 })
-    .limit(parseLimit(req.query.limit));
+  const { items: customers, pagination } = await paginateQuery(Customer, filter, parsePagination(req.query), {
+    sort: { createdAt: -1, _id: -1 },
+    select: 'name email phone emailVerified onboardingCompleted createdAt'
+  });
 
   const membershipCounts = await Membership.aggregate([
     { $match: { customerId: { $in: customers.map((c) => c._id) } } },
@@ -350,7 +348,8 @@ const listCustomers = asyncHandler(async (req, res) => {
       customers: customers.map((c) => ({
         ...c.toObject(),
         membershipCount: countByCustomerId.get(String(c._id)) || 0
-      }))
+      })),
+      pagination
     }
   });
 });

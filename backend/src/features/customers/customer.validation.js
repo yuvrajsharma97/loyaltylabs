@@ -3,6 +3,7 @@ const { requiredString, enumField } = require('../../shared/utils/zodHelpers');
 
 const updateProfileSchema = z
   .object({
+    name: z.string().trim().min(1, 'Name cannot be empty').max(80).optional(),
     phone: z.string().optional(),
     interests: z.array(z.enum(['cafe', 'retail', 'services', 'other'])).optional(),
     onboardingCompleted: z.boolean().optional()

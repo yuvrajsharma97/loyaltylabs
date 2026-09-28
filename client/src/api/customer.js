@@ -1,33 +1,28 @@
-import client from './client';
+import apiClient from './client';
 
-export async function getMe() {
-  const { data } = await client.get('/dashboard/customer/me');
-  return data.data;
+export function getMe() {
+  return apiClient.get('/dashboard/customer/me');
 }
 
-export async function updateMe(patch) {
-  const { data } = await client.patch('/dashboard/customer/me', patch);
-  return data.data;
+export function updateMe(payload) {
+  return apiClient.patch('/dashboard/customer/me', payload);
 }
 
-export async function getQrToken() {
-  const { data } = await client.get('/dashboard/customer/me/qr-token');
-  return data.data;
+export function getQrToken() {
+  return apiClient.get('/dashboard/customer/me/qr-token');
 }
 
-export async function getTransactions({ limit, before, storeId } = {}) {
-  const { data } = await client.get('/dashboard/customer/me/transactions', {
-    params: { limit, before, storeId }
+export function getTransactions({ page, limit, storeId } = {}) {
+  return apiClient.get('/dashboard/customer/me/transactions', {
+    params: { page, limit, storeId },
   });
-  return data.data;
 }
 
-export async function createDispute({ storeId, transactionId, transactionType, customerNote }) {
-  const { data } = await client.post('/dashboard/customer/me/disputes', {
+export function createDispute({ storeId, transactionId, transactionType, customerNote }) {
+  return apiClient.post('/dashboard/customer/me/disputes', {
     storeId,
     transactionId,
     transactionType,
-    customerNote
+    customerNote,
   });
-  return data.data;
 }

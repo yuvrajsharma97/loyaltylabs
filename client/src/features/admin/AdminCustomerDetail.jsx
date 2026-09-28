@@ -1,97 +1,137 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { getCustomer } from '../../api/admin';
-import Card from '../../shared/components/Card';
-import LoadingSpinner from '../../shared/components/LoadingSpinner';
+import { Link, useParams } from 'react-router-dom';
+import * as adminApi from '../../api/admin';
 import { formatDate } from '../../shared/utils/formatters';
+import { CATEGORY_LABELS } from '../../shared/utils/labels';
+import Card from '../../shared/components/Card';
+import Avatar from '../../shared/components/Avatar';
+import Badge from '../../shared/components/Badge';
+import Button from '../../shared/components/Button';
+import Icon from '../../shared/components/Icon';
+import KpiTile from '../../shared/components/KpiTile';
+import EmptyState from '../../shared/components/EmptyState';
+import LoadingSpinner from '../../shared/components/LoadingSpinner';
 
-export default function AdminCustomerDetail() {
+const AdminCustomerDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    getCustomer(id)
+    setData(null);
+    setError(null);
+    adminApi
+      .getCustomer(id)
       .then(setData)
-      .catch((err) => {
-        toast.error(err.message || 'Could not load this customer');
-        navigate('/admin/customers', { replace: true });
-      });
-  }, [id, navigate]);
+      .catch((err) => setError(err));
+  }, [id]);
+
+  const backLink = (
+    <Link to="/admin/customers" className="inline-flex items-center gap-1 text-label text-text-secondary hover:text-text-primary">
+      <Icon name="arrow_back" style={{ fontSize: '1.1rem' }} />
+      Back to customers
+    </Link>
+  );
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        {backLink}
+        <div className="mt-4">
+          <EmptyState
+            icon="person_off"
+            title="Customer not found"
+            body={error.message}
+            action={
+              <Link to="/admin/customers">
+                <Button size="sm">Back to customers</Button>
+              </Link>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner className="py-16" />;
   }
 
   const { customer, memberships } = data;
+  const totalPoints = memberships.reduce((sum, membership) => sum + membership.pointsBalance, 0);
 
   return (
-    <div className="flex flex-col gap-xl max-w-[1100px] mx-auto">
-      <button
-        type="button"
-        onClick={() => navigate('/admin/customers')}
-        className="flex items-center gap-xs text-body-sm font-semibold text-on-surface-variant hover:text-primary transition-colors w-fit"
-      >
-        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-        Back to customers
-      </button>
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      {backLink}
 
-      <div className="flex flex-col gap-xs">
-        <h1 className="font-display text-display-md-mobile md:text-display-md">{customer.name}</h1>
-        <p className="text-on-surface-variant">{customer.email}</p>
+      <Card className="mt-4 flex items-center gap-4">
+        <Avatar name={customer.name} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-page-title text-text-primary">{customer.name}</h1>
+          <p className="truncate text-body-sm text-text-secondary">{customer.email}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge tone={customer.emailVerified ? 'success' : 'warning'}>
+              {customer.emailVerified ? 'Email verified' : 'Email unverified'}
+            </Badge>
+            <Badge tone={customer.onboardingCompleted ? 'success' : 'neutral'}>
+              {customer.onboardingCompleted ? 'Onboarded' : 'Not onboarded'}
+            </Badge>
+          </div>
+        </div>
+      </Card>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 rail:grid-cols-4">
+        <KpiTile label="Shops joined" value={memberships.length} />
+        <KpiTile label="Points held" value={totalPoints.toLocaleString()} />
+        <KpiTile label="Phone" value={customer.phone || '-'} />
+        <KpiTile label="Joined" value={formatDate(customer.createdAt)} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-lg">
-        <Card className="flex flex-col gap-xs">
-          <p className="font-mono text-label-mono text-on-surface-variant uppercase">Email verified</p>
-          <p className="font-display text-headline-sm text-primary">{customer.emailVerified ? 'Yes' : 'No'}</p>
-        </Card>
-        <Card className="flex flex-col gap-xs">
-          <p className="font-mono text-label-mono text-on-surface-variant uppercase">Onboarded</p>
-          <p className="font-display text-headline-sm text-primary">{customer.onboardingCompleted ? 'Yes' : 'No'}</p>
-        </Card>
-        <Card className="flex flex-col gap-xs">
-          <p className="font-mono text-label-mono text-on-surface-variant uppercase">Phone</p>
-          <p className="font-display text-headline-sm text-primary">{customer.phone || '-'}</p>
-        </Card>
-        <Card className="flex flex-col gap-xs">
-          <p className="font-mono text-label-mono text-on-surface-variant uppercase">Joined</p>
-          <p className="font-display text-headline-sm text-primary">{formatDate(customer.createdAt)}</p>
-        </Card>
-      </div>
+      {customer.interests?.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-label text-text-muted">Interests</span>
+          {customer.interests.map((interest) => (
+            <span key={interest} className="rounded-pill border border-border bg-surface px-3 py-1 text-label text-text-secondary">
+              {CATEGORY_LABELS[interest] || interest}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <section className="flex flex-col gap-lg">
-        <h2 className="font-display text-headline-sm">Store memberships</h2>
+      <h2 className="mt-6 text-label text-text-muted">Shop memberships</h2>
+      <Card className="mt-2 py-1">
         {memberships.length === 0 ? (
-          <Card className="text-body-sm text-on-surface-variant">Not a member of any store yet.</Card>
+          <div className="py-3">
+            <EmptyState icon="storefront" title="Not a member of any shop yet" />
+          </div>
         ) : (
-          <Card className="divide-y divide-outline-variant !p-0">
-            {memberships.map((m) => (
-              <div
-                key={m.storeId || m.storeName}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md px-xl py-lg"
-              >
-                <div className="flex items-center gap-sm min-w-0">
-                  <p className="font-body text-body-md font-semibold truncate">{m.storeName}</p>
-                  {m.storeStatus === 'suspended' && (
-                    <span className="font-mono text-label-mono uppercase px-xs py-[2px] rounded bg-error-container text-on-error-container shrink-0">
-                      Suspended
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-xl text-body-sm text-on-surface-variant shrink-0">
-                  <span>Joined {formatDate(m.joinedAt)}</span>
-                  <span>{m.lastActivityAt ? `Last visit ${formatDate(m.lastActivityAt)}` : 'No activity yet'}</span>
-                  <span className="font-mono text-body-md font-semibold text-primary">
-                    {m.pointsBalance.toLocaleString()} pts
-                  </span>
+          memberships.map((membership) => (
+            <div
+              key={membership.storeId || membership.storeName}
+              className="flex flex-col gap-1 border-b border-divider py-3 last:border-0 wide:flex-row wide:items-center wide:justify-between"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar name={membership.storeName} shape="square" size="sm" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-card-title text-text-primary">{membership.storeName}</p>
+                    {membership.storeStatus === 'suspended' && <Badge tone="error">Suspended</Badge>}
+                  </div>
+                  <p className="text-body-sm text-text-muted">
+                    Joined {formatDate(membership.joinedAt)} ·{' '}
+                    {membership.lastActivityAt ? `last visit ${formatDate(membership.lastActivityAt)}` : 'no activity yet'}
+                  </p>
                 </div>
               </div>
-            ))}
-          </Card>
+              <span className="tabular-nums text-amount text-primary wide:text-right">
+                {membership.pointsBalance.toLocaleString()} pts
+              </span>
+            </div>
+          ))
         )}
-      </section>
+      </Card>
     </div>
   );
-}
+};
+
+export default AdminCustomerDetail;

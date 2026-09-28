@@ -1,67 +1,83 @@
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { listDisputes } from '../../api/admin';
+import { useCallback, useState } from 'react';
+import * as adminApi from '../../api/admin';
+import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
+import SegmentedControl from '../../shared/components/SegmentedControl';
 import Card from '../../shared/components/Card';
+import Badge from '../../shared/components/Badge';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
-import { formatDate } from '../../shared/utils/formatters';
+import EmptyState from '../../shared/components/EmptyState';
+import Pagination from '../../shared/components/Pagination';
+import ListPage from '../../shared/components/ListPage';
+import ScrollPanel from '../../shared/components/ScrollPanel';
+import { formatDateTime } from '../../shared/utils/formatters';
+import { DISPUTE_TYPE_LABELS } from '../../shared/utils/labels';
 
-const TABS = [
+const STATUS_FILTERS = [
   { value: 'open', label: 'Open' },
   { value: 'resolved', label: 'Resolved' },
-  { value: 'all', label: 'All' }
+  { value: 'all', label: 'All' },
 ];
 
-// Read-only, platform-wide - resolving a dispute stays a store-owner action
-// (see the store dashboard's DisputesPanel); admin only needs visibility here.
-export default function AdminDisputes() {
-  const [status, setStatus] = useState('open');
-  const [disputes, setDisputes] = useState(null);
+const PAGE_SIZE = 10;
 
-  useEffect(() => {
-    listDisputes({ status })
-      .then(setDisputes)
-      .catch((err) => toast.error(err.message || 'Could not load disputes'));
-  }, [status]);
+// There's no admin-side approval workflow in the backend (stores go live
+// immediately on registration) - this tab does the closest real thing an
+// admin can act on: platform-wide dispute oversight. Resolving still
+// happens on the store owner's side; this is read-only here.
+const AdminDisputes = () => {
+  const [status, setStatus] = useState('open');
+
+  const fetchPage = useCallback(
+    (page) =>
+      adminApi
+        .listDisputes({ status, page, limit: PAGE_SIZE })
+        .then(({ disputes, pagination }) => ({ items: disputes, pagination })),
+    [status]
+  );
+  const { items: disputes, pagination, setPage, isLoading } = usePaginatedList(fetchPage);
 
   return (
-    <div className="flex flex-col gap-xl max-w-[1100px] mx-auto">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Disputes</h1>
-
-      <div className="flex rounded-lg bg-surface-container-low p-1 gap-1 w-fit">
-        {TABS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setStatus(value)}
-            className={`px-xl py-sm rounded-md font-body text-body-sm font-semibold transition-colors ${
-              status === value ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {!disputes ? (
-        <LoadingSpinner />
-      ) : disputes.length === 0 ? (
-        <Card className="text-body-sm text-on-surface-variant">No {status === 'all' ? '' : status} disputes.</Card>
+    <ListPage
+      header={
+        <>
+          <h1 className="text-page-title text-text-primary">Disputes</h1>
+          <p className="mt-1 text-body-sm text-text-secondary">Disputes that need attention across every store.</p>
+          <SegmentedControl options={STATUS_FILTERS} value={status} onChange={setStatus} className="mt-4" />
+        </>
+      }
+      footer={<Pagination pagination={pagination} onPageChange={setPage} isDisabled={isLoading} itemLabel="disputes" />}
+    >
+      {isLoading && disputes.length === 0 ? (
+        <LoadingSpinner className="py-16" />
       ) : (
-        <div className="flex flex-col gap-md">
-          {disputes.map((dispute) => (
-            <Card key={dispute._id} className="flex flex-col gap-xs">
-              <p className="font-body text-body-sm font-semibold text-on-surface-variant uppercase">
-                {dispute.transactionType}
-              </p>
-              <p className="text-body-md">{dispute.customerNote}</p>
-              <p className="text-body-sm text-on-surface-variant">{formatDate(dispute.createdAt)}</p>
-              {dispute.ownerNote && (
-                <p className="text-body-sm text-on-surface-variant italic">Store note: {dispute.ownerNote}</p>
-              )}
-            </Card>
-          ))}
-        </div>
+        <ScrollPanel resetKey={disputes[0]?._id} className="-mx-1 flex-1 px-1 py-1">
+          <div className={`flex flex-col gap-3 transition-opacity duration-150 ${isLoading ? 'opacity-50' : ''}`}>
+            {disputes.length === 0 && <EmptyState icon="fact_check" title="Nothing here" />}
+            {disputes.map((dispute) => (
+              <Card key={dispute._id}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={dispute.status === 'open' ? 'warning' : 'success'}>{dispute.status}</Badge>
+                    <span className="text-label text-text-secondary">
+                      {DISPUTE_TYPE_LABELS[dispute.transactionType] || dispute.transactionType}
+                    </span>
+                  </div>
+                  <span className="font-mono text-label text-text-muted">{formatDateTime(dispute.createdAt)}</span>
+                </div>
+                <p className="mt-2 text-body text-text-primary">{dispute.customerNote}</p>
+                {dispute.ownerNote && (
+                  <p className="mt-1 text-body-sm text-text-secondary">Store note: {dispute.ownerNote}</p>
+                )}
+                {dispute.resolvedAt && (
+                  <p className="mt-1 text-label text-text-muted">Resolved {formatDateTime(dispute.resolvedAt)}</p>
+                )}
+              </Card>
+            ))}
+          </div>
+        </ScrollPanel>
       )}
-    </div>
+    </ListPage>
   );
-}
+};
+
+export default AdminDisputes;

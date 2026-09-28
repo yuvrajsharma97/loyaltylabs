@@ -565,6 +565,85 @@ const logoutAll = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { loggedOutAll: true } });
 });
 
+const ACCOUNT_FIELDS = 'name email phone emailVerified createdAt';
+
+/**
+ * The signed-in account's own details (store owner, super admin or
+ * customer). Customers also have the richer GET /customers/me.
+ * @route GET /auth/account
+ * @access Private
+ */
+const getAccount = asyncHandler(async (req, res) => {
+  const account = await accountModel(req.auth.type).findById(req.auth.id).select(ACCOUNT_FIELDS);
+  if (!account) {
+    throw new AppError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
+  }
+  res.json({ success: true, data: account });
+});
+
+/**
+ * Update the signed-in account's name/phone. Email isn't editable - it's the
+ * login identity and gates verification/QR issuance.
+ * @route PATCH /auth/account
+ * @access Private
+ * @body {string} [name]
+ * @body {string} [phone]
+ */
+const updateAccount = asyncHandler(async (req, res) => {
+  const account = await accountModel(req.auth.type)
+    .findByIdAndUpdate(req.auth.id, { $set: req.body }, { new: true, runValidators: true })
+    .select(ACCOUNT_FIELDS);
+  if (!account) {
+    throw new AppError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
+  }
+  res.json({ success: true, data: account });
+});
+
+/**
+ * Change the signed-in account's password. Requires the current password,
+ * except for a Google-only customer setting one for the first time. Every
+ * other session is signed out; the caller's own (refreshToken) is kept.
+ * @route POST /auth/change-password
+ * @access Private
+ * @body {string} [currentPassword]
+ * @body {string} newPassword
+ * @body {string} [refreshToken] - the caller's session to keep
+ */
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, refreshToken } = req.body;
+  const { id, type } = req.auth;
+
+  const account = await accountModel(type).findById(id);
+  if (!account) {
+    throw new AppError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
+  }
+
+  if (account.passwordHash) {
+    if (!currentPassword) {
+      throw new AppError('CURRENT_PASSWORD_REQUIRED', 'Enter your current password', 400);
+    }
+    const matches = await bcrypt.compare(currentPassword, account.passwordHash);
+    if (!matches) {
+      throw new AppError('CURRENT_PASSWORD_INCORRECT', 'Current password is incorrect', 400);
+    }
+  }
+
+  assertPasswordStrong(newPassword);
+
+  account.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  // A Google-only customer who sets a password can now sign in either way.
+  if (type === 'customer' && account.authProvider === 'google') {
+    account.authProvider = 'both';
+  }
+  await account.save();
+
+  const otherSessions = { userId: id, userType: type, revoked: false };
+  if (refreshToken) otherSessions.token = { $ne: refreshToken };
+  await RefreshToken.updateMany(otherSessions, { $set: { revoked: true } });
+
+  res.json({ success: true, data: { passwordChanged: true } });
+});
+
 module.exports = {
   registerCustomer,
   verifyEmail,
@@ -577,5 +656,8 @@ module.exports = {
   resetPassword,
   refresh,
   logout,
-  logoutAll
+  logoutAll,
+  getAccount,
+  updateAccount,
+  changePassword
 };

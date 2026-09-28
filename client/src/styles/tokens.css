@@ -1,80 +1,80 @@
-/* Design tokens extracted from `design markdown/`. Light = Warm Neighborly
-   Motif (consistent across all 5 light screens). Dark = the majority
-   Emerald Night implementation (onboarding/dashboard/shop_rewards screens) -
-   the sign_in/sign_up_emerald_night screens used a different font/spacing
-   system and were treated as the outlier, not the source of truth. See
-   loyaltylabs project memory for the reasoning. */
-
+/* Design tokens - LoyaltyLabs design system (see "Design system foundations
+   needed/CLAUDE.md" and Design Foundations.dc.html). Light mode only, no
+   dark theme. Values here are the raw source of truth; index.css wires them
+   into Tailwind's @theme so components can use them as utility classes
+   (bg-primary, text-muted, rounded-card, shadow-card, ...). */
 :root {
-  --color-surface: #fff8f5;
-  --color-surface-dim: #e5d7d0;
-  --color-surface-bright: #fff8f5;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #fff1ea;
-  --color-surface-container: #f9ebe4;
-  --color-surface-container-high: #f3e6de;
-  --color-surface-container-highest: #ede0d9;
-  --color-on-surface: #211a16;
-  --color-on-surface-variant: #55433d;
-  --color-inverse-surface: #362f2a;
-  --color-inverse-on-surface: #fceee7;
-  --color-outline: #88726c;
-  --color-outline-variant: #dbc1b9;
-  --color-primary: #99462a;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #d97757;
-  --color-on-primary-container: #541400;
-  --color-inverse-primary: #ffb59e;
-  --color-secondary: #855300;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #fcae44;
-  --color-on-secondary-container: #6e4400;
-  --color-tertiary: #086d39;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #4da369;
-  --color-on-tertiary-container: #003317;
-  --color-error: #ba1a1a;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
-  --color-background: #fff8f5;
-  --color-on-background: #211a16;
-  --color-surface-variant: #ede0d9;
-}
+  /* Surfaces */
+  --color-canvas: #f5f7f8;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #ebe3a7;
+  --color-surface-disabled: #efeae1;
 
-.dark {
-  --color-surface: #040d12;
-  --color-surface-dim: #040d12;
-  --color-surface-bright: #303b40;
-  --color-surface-container-lowest: #040d12;
-  --color-surface-container-low: #131d22;
-  --color-surface-container: #0d1a1e;
-  --color-surface-container-high: #183d3d;
-  --color-surface-container-highest: #183d3d;
-  --color-on-surface: #93b1a6;
-  --color-on-surface-variant: #93b1a6;
-  --color-inverse-surface: #d9e4eb;
-  --color-inverse-on-surface: #283237;
-  --color-outline: #8b928e;
-  --color-outline-variant: #46615a;
-  --color-primary: #8fbfae;
-  --color-on-primary: #04211a;
-  --color-primary-container: #183d3d;
-  --color-on-primary-container: #93b1a6;
-  --color-inverse-primary: #406658;
-  --color-secondary: #5c8374;
-  --color-on-secondary: #040d12;
-  --color-secondary-container: #183d3d;
-  --color-on-secondary-container: #93b1a6;
-  --color-tertiary: #5c8374;
-  --color-on-tertiary: #040d12;
-  --color-tertiary-container: #7a978c;
-  --color-on-tertiary-container: #132f27;
-  --color-error: #ffb4ab;
-  --color-on-error: #690005;
-  --color-error-container: #93000a;
-  --color-on-error-container: #ffdad6;
-  --color-background: #040d12;
-  --color-on-background: #93b1a6;
-  --color-surface-variant: #183d3d;
+  /* Primary (olive green) */
+  --color-primary: #2b5748;
+  --color-primary-hover: #234739;
+  --color-primary-pressed: #1c3a2e;
+  --color-primary-tint: #e4edea;
+  --color-on-primary: #ffffff;
+
+  /* Accent - fills/dots/badges only, never text or strokes */
+  --color-accent: #fff78d;
+  --color-accent-text: #5a5410;
+
+  /* Text */
+  --color-text-primary: #1c1f16;
+  --color-text-secondary: #4e5346;
+  --color-text-muted: #6e7679;
+  --color-text-disabled: #a8a79c;
+
+  /* Borders */
+  --color-border: #e1e6e8;
+  --color-border-strong: #cbd3d6;
+  --color-divider: #edf0f2;
+
+  /* Semantic status */
+  --color-success: #2f6b3a;
+  --color-success-text: #245c2e;
+  --color-success-bg: #e6efe6;
+  --color-warning: #b4700a;
+  --color-warning-text: #8a5305;
+  --color-warning-bg: #fdf0dc;
+  --color-error: #a32b1c;
+  --color-error-text: #96271a;
+  --color-error-bg: #f8e5e1;
+  --color-info: #2c5670;
+  --color-info-text: #27536d;
+  --color-info-bg: #e6eef3;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgba(28, 31, 22, 0.04);
+  --shadow-lift: 0 10px 22px -12px rgba(28, 31, 22, 0.22);
+  --shadow-sheet: 0 -18px 44px -28px rgba(28, 31, 22, 0.45);
+  --shadow-dialog: 0 24px 60px -24px rgba(28, 31, 22, 0.5);
+
+  /* Radius */
+  --radius-input: 4px;
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --radius-sheet: 20px;
+  --radius-pill: 999px;
+
+  /* Glass recipes - chrome/overlay only, never on financial data, list
+     rows, inputs, or primary buttons. */
+  --glass-chrome-bg: rgba(245, 247, 248, 0.72);
+  --glass-chrome-blur: blur(18px) saturate(140%);
+  --glass-overlay-bg: rgba(255, 255, 255, 0.86);
+  --glass-overlay-blur: blur(28px) saturate(140%);
+  --glass-scrim-bg: rgba(28, 31, 22, 0.34);
+  --glass-scrim-blur: blur(3px);
+  --glass-pill-bg: rgba(255, 255, 255, 0.62);
+  --glass-pill-blur: blur(10px);
+
+  /* Landing page marketing cards - lighter, more translucent than the app's
+     overlay recipe since these sit over a decorative glow, not app chrome. */
+  --glass-card-bg: rgba(255, 255, 255, 0.52);
+  --glass-card-border: rgba(255, 255, 255, 0.65);
+  --glass-card-blur: blur(20px) saturate(160%);
+  --glass-card-tint-bg: rgba(228, 237, 234, 0.52);
+  --glass-card-tint-border: rgba(203, 218, 212, 0.75);
 }

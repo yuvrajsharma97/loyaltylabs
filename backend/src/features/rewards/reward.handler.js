@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const { isValidObjectId } = require('../../shared/utils/objectId');
+const { parsePagination, paginateQuery } = require('../../shared/utils/pagination');
 
 const Reward = require('./reward.model');
 const Store = require('../stores/store.model');
@@ -13,6 +14,8 @@ const Redemption = require('../redemptions/redemption.model');
  * inactive and future-dated "Scheduled" rewards).
  * @route GET /stores/:id/rewards
  * @access Public (richer view if authenticated as the owning store_owner)
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const listStoreRewards = asyncHandler(async (req, res) => {
   const { id: storeId } = req.params;
@@ -44,9 +47,14 @@ const listStoreRewards = asyncHandler(async (req, res) => {
     ? 'title description imageUrl pointsRequired rewardType value active validFrom validTo stockLimit'
     : 'title description imageUrl pointsRequired rewardType value validTo';
 
-  const rewards = await Reward.find(filter).select(fields);
+  // Cheapest first, so page 1 always carries the lowest-threshold reward
+  // (the customer stamp card measures progress against it).
+  const { items: rewards, pagination } = await paginateQuery(Reward, filter, parsePagination(req.query), {
+    sort: { pointsRequired: 1, _id: 1 },
+    select: fields
+  });
 
-  res.json({ success: true, data: { rewards } });
+  res.json({ success: true, data: { rewards, pagination } });
 });
 
 /**

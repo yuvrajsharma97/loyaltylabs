@@ -1,89 +1,82 @@
-import { createContext, useContext, useMemo, useState } from 'react';
-import client, { setSession, clearSession, getSession } from '../../api/client';
-import { getMe as getCustomerMe } from '../../api/customer';
-import { getMyStore, getOnboarding as getStoreOnboarding } from '../../api/storeOwner';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { getAccessToken, getRefreshToken, getStoredRole, setSession, clearSession } from '../../api/client';
+import * as authApi from '../../api/auth';
+import * as customerApi from '../../api/customer';
+import * as storesApi from '../../api/stores';
 
 const AuthContext = createContext(null);
 
-// Login only ever returns {accessToken, refreshToken, role} - never
-// onboarding status - so both sign-in and "am I still logged in on refresh"
-// need this extra lookup to decide dashboard vs onboarding.
-export async function resolvePostAuthPath(role) {
-  if (role === 'customer') {
-    const me = await getCustomerMe();
-    return me.onboardingCompleted ? '/customer' : '/onboarding/customer';
-  }
-  if (role === 'store_owner') {
-    const store = await getMyStore();
-    const onboarding = await getStoreOnboarding(store._id);
-    // loyaltyRuleSet is the only backend-tracked flag that maps to a
-    // required onboarding step (till PINs have no dedicated flag -
-    // tillModeTested is set by the till on first real scan, not by adding a
-    // PIN - so the onboarding flow itself enforces that step client-side).
-    return onboarding.loyaltyRuleSet ? '/store' : '/onboarding/store';
-  }
-  if (role === 'super_admin') return '/admin';
-  return '/sign-in';
+// Login/refresh never return a profile, only { accessToken, refreshToken,
+// role } - the profile has to be fetched separately per role. There's no
+// "me" endpoint for super_admin, so its profile is just the role itself.
+async function fetchProfile(role) {
+  if (role === 'customer') return customerApi.getMe();
+  if (role === 'store_owner') return storesApi.getMyStore();
+  return { role: 'super_admin' };
 }
 
 export function AuthProvider({ children }) {
-  const [role, setRole] = useState(() => getSession().role);
+  const [role, setRole] = useState(getStoredRole());
+  const [user, setUser] = useState(null);
+  // Only worth showing a loading state if there's actually a session to
+  // rehydrate - an anonymous visitor has nothing to wait for.
+  const [isLoading, setIsLoading] = useState(() => Boolean(getAccessToken() && getStoredRole()));
 
-  const login = async ({ email, password, accountType }) => {
-    const { data } = await client.post('/auth/login', { email, password, accountType });
-    setSession({ ...data.data, role: data.data.role });
-    setRole(data.data.role);
-    return data.data;
-  };
+  const loadProfile = useCallback(async (currentRole) => {
+    const profile = await fetchProfile(currentRole);
+    setUser(profile);
+    return profile;
+  }, []);
 
-  const loginWithGoogle = async (idToken) => {
-    const { data } = await client.post('/auth/google', { idToken });
-    setSession({ ...data.data, role: data.data.role });
-    setRole(data.data.role);
-    return data.data;
-  };
+  useEffect(() => {
+    if (!getAccessToken() || !role) return;
 
-  const registerCustomer = async ({ name, email, password, phone }) => {
-    const { data } = await client.post('/auth/register/customer', { name, email, password, phone });
-    return data.data;
-  };
+    loadProfile(role)
+      .catch(() => {
+        clearSession();
+        setRole(null);
+      })
+      .finally(() => setIsLoading(false));
+    // Only ever needs to run once on mount to rehydrate the session -
+    // login()/logout() manage role changes explicitly afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ownerName/storeName/phone are collected during onboarding instead - see
-  // auth.handler.js's registerStore for the placeholder-name reasoning.
-  const registerStore = async ({ email, password }) => {
-    const { data } = await client.post('/auth/register/store', { email, password });
-    return data.data;
+  const login = async ({ accessToken, refreshToken, role: newRole }) => {
+    setSession({ accessToken, refreshToken, role: newRole });
+    setRole(newRole);
+    return loadProfile(newRole);
   };
 
   const logout = async () => {
-    const { refreshToken } = getSession();
     try {
-      if (refreshToken) await client.post('/auth/logout', { refreshToken });
+      await authApi.logout({ refreshToken: getRefreshToken() });
     } catch {
-      // Already-invalid refresh token shouldn't block clearing local session.
+      // Session is being cleared locally regardless of whether the server
+      // call succeeds - a dead/expired refresh token shouldn't block logout.
     }
     clearSession();
     setRole(null);
+    setUser(null);
   };
 
-  const value = useMemo(
-    () => ({
-      role,
-      isAuthenticated: Boolean(role),
-      login,
-      loginWithGoogle,
-      registerCustomer,
-      registerStore,
-      logout
-    }),
-    [role]
-  );
+  const value = {
+    role,
+    user,
+    isLoading,
+    isAuthenticated: Boolean(role),
+    login,
+    logout,
+    refreshProfile: () => loadProfile(role),
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

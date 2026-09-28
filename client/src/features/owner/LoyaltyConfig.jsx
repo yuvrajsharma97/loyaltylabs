@@ -1,97 +1,105 @@
-import { useState } from 'react';
-import toast from 'react-hot-toast';
-import { updateLoyaltyConfig } from '../../api/storeOwner';
-import { useStore } from './OwnerDashboard';
-import Card from '../../shared/components/Card';
+import { useEffect, useState } from 'react';
+import * as storesApi from '../../api/stores';
+import { useAuth } from '../../shared/hooks/useAuth';
+import { showSuccessToast } from '../../shared/utils/toast';
 import Button from '../../shared/components/Button';
+import Input from '../../shared/components/Input';
+import SegmentedControl from '../../shared/components/SegmentedControl';
+import LoadingSpinner from '../../shared/components/LoadingSpinner';
 
-const inputClass =
-  'w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-md font-body text-body-md outline-none focus:border-primary transition-all';
-const labelClass = 'font-body text-body-sm text-on-surface-variant ml-xs';
+const MODE_OPTIONS = [
+  { value: 'per_currency', label: 'Per £ spent' },
+  { value: 'per_visit', label: 'Per visit' },
+];
 
-export default function LoyaltyConfig() {
-  const { store, refetch } = useStore();
-  const program = store.loyaltyProgram;
-  const [mode, setMode] = useState(program.mode);
-  const [pointsPerUnit, setPointsPerUnit] = useState(program.pointsPerUnit ?? 1);
-  const [fixedPointsPerVisit, setFixedPointsPerVisit] = useState(program.fixedPointsPerVisit ?? 10);
-  const [minPurchase, setMinPurchase] = useState(program.minPurchase ?? 0);
-  const [saving, setSaving] = useState(false);
+const LoyaltyConfig = () => {
+  const { user: store } = useAuth();
+  const [config, setConfig] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    storesApi
+      .getLoyaltyConfig(store._id)
+      .then(setConfig)
+      .finally(() => setIsLoading(false));
+  }, [store._id]);
 
   const handleSave = async () => {
-    setSaving(true);
+    setIsSaving(true);
     try {
-      await updateLoyaltyConfig(store._id, {
-        mode,
-        pointsPerUnit: mode === 'per_currency' ? Number(pointsPerUnit) : undefined,
-        fixedPointsPerVisit: mode === 'per_visit' ? Number(fixedPointsPerVisit) : undefined,
-        minPurchase: Number(minPurchase)
+      const updated = await storesApi.updateLoyaltyConfig(store._id, {
+        mode: config.mode,
+        pointsPerUnit: config.mode === 'per_currency' ? Number(config.pointsPerUnit) : undefined,
+        fixedPointsPerVisit: config.mode === 'per_visit' ? Number(config.fixedPointsPerVisit) : undefined,
+        minPurchase: Number(config.minPurchase) || 0,
+        pointsExpiryDays: config.pointsExpiryDays ? Number(config.pointsExpiryDays) : null,
+        maxPointsBalance: config.maxPointsBalance ? Number(config.maxPointsBalance) : null,
       });
-      await refetch();
-      toast.success('Saved');
-    } catch (err) {
-      toast.error(err.message || 'Could not save loyalty program settings');
+      setConfig(updated);
+      showSuccessToast('Earning rules updated.');
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
+  if (isLoading || !config) {
+    return <LoadingSpinner className="py-8" />;
+  }
+
   return (
-    <Card className="flex flex-col gap-lg">
-      <h2 className="font-display text-headline-sm">Loyalty program</h2>
-      <div className="flex rounded-lg bg-surface-container-low p-1 gap-1">
-        {[
-          ['per_currency', 'Per amount spent'],
-          ['per_visit', 'Fixed per visit']
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setMode(value)}
-            className={`flex-1 py-sm rounded-md font-body text-body-sm font-semibold transition-colors ${
-              mode === value ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {mode === 'per_currency' ? (
-        <div className="space-y-xs">
-          <label className={labelClass}>Points per $1 spent</label>
-          <input
-            type="number"
-            min="0"
-            value={pointsPerUnit}
-            onChange={(e) => setPointsPerUnit(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-      ) : (
-        <div className="space-y-xs">
-          <label className={labelClass}>Points per visit</label>
-          <input
-            type="number"
-            min="0"
-            value={fixedPointsPerVisit}
-            onChange={(e) => setFixedPointsPerVisit(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-      )}
-      <div className="space-y-xs">
-        <label className={labelClass}>Minimum purchase ($)</label>
-        <input
+    <div className="flex flex-col gap-4">
+      <SegmentedControl
+        options={MODE_OPTIONS}
+        value={config.mode}
+        onChange={(mode) => setConfig({ ...config, mode })}
+      />
+
+      {config.mode === 'per_currency' ? (
+        <Input
+          label="Points per £1 spent"
           type="number"
           min="0"
-          value={minPurchase}
-          onChange={(e) => setMinPurchase(e.target.value)}
-          className={inputClass}
+          value={config.pointsPerUnit}
+          onChange={(event) => setConfig({ ...config, pointsPerUnit: event.target.value })}
         />
-      </div>
-      <Button loading={saving} onClick={handleSave} className="w-fit px-xl">
-        Save
+      ) : (
+        <Input
+          label="Points per visit"
+          type="number"
+          min="0"
+          value={config.fixedPointsPerVisit}
+          onChange={(event) => setConfig({ ...config, fixedPointsPerVisit: event.target.value })}
+        />
+      )}
+
+      <Input
+        label="Minimum purchase (£, optional)"
+        type="number"
+        min="0"
+        value={config.minPurchase}
+        onChange={(event) => setConfig({ ...config, minPurchase: event.target.value })}
+      />
+      <Input
+        label="Points expire after (days, optional)"
+        type="number"
+        min="1"
+        value={config.pointsExpiryDays || ''}
+        onChange={(event) => setConfig({ ...config, pointsExpiryDays: event.target.value })}
+      />
+      <Input
+        label="Maximum points balance (optional)"
+        type="number"
+        min="1"
+        value={config.maxPointsBalance || ''}
+        onChange={(event) => setConfig({ ...config, maxPointsBalance: event.target.value })}
+      />
+
+      <Button isLoading={isSaving} onClick={handleSave} className="self-start">
+        Save changes
       </Button>
-    </Card>
+    </div>
   );
-}
+};
+
+export default LoyaltyConfig;

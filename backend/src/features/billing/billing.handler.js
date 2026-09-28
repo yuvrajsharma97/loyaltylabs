@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const { isValidObjectId } = require('../../shared/utils/objectId');
+const { parsePagination, paginateQuery } = require('../../shared/utils/pagination');
 
 const { StoreBilling, UsageSnapshot } = require('./billing.model');
 const Store = require('../stores/store.model');
@@ -71,17 +72,20 @@ const getUsage = asyncHandler(async (req, res) => {
  * @route GET /billing/history
  * @access Private (store_owner, owner of this store)
  * @query {string} storeId
- * @query {number} [limit=20]
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const getHistory = asyncHandler(async (req, res) => {
   const { store } = await loadOwnedStoreBilling(req);
 
-  const parsedLimit = parseInt(req.query.limit, 10);
-  const limit = Math.min(Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 20 : parsedLimit, 100);
+  const { items: snapshots, pagination } = await paginateQuery(
+    UsageSnapshot,
+    { storeId: store._id },
+    parsePagination(req.query),
+    { sort: { periodStart: -1, _id: -1 } }
+  );
 
-  const snapshots = await UsageSnapshot.find({ storeId: store._id }).sort({ periodStart: -1 }).limit(limit);
-
-  res.json({ success: true, data: { snapshots } });
+  res.json({ success: true, data: { snapshots, pagination } });
 });
 
 module.exports = { getUsage, getHistory };

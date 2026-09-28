@@ -1,63 +1,35 @@
-import { useEffect, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useEffect, useRef } from 'react';
 import { loadGoogleIdentityServices } from '../utils/loadGoogleIdentityServices';
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-// Google Identity Services requires its own real button element to receive
-// the click (a JS-triggered .click() on it is blocked) - so the actual GIS
-// button is rendered here but kept invisible and stretched to fill this
-// container, sitting on top of our own styled button underneath. The user
-// sees our styling; the click that actually lands is Google's.
-export default function GoogleSignInButton({ onCredential, disabled }) {
-  const wrapperRef = useRef(null);
-  const gisContainerRef = useRef(null);
-  const [ready, setReady] = useState(false);
+// Google Sign-In is customer-only - store owners and admins are local
+// email+password accounts (see backend/src/features/auth). Never render
+// this on the owner/admin sign-in pages.
+const GoogleSignInButton = ({ onCredential }) => {
+  const buttonRef = useRef(null);
 
   useEffect(() => {
-    if (!CLIENT_ID) return;
-    let cancelled = false;
+    let isCancelled = false;
 
-    loadGoogleIdentityServices()
-      .then((google) => {
-        if (cancelled || !gisContainerRef.current) return;
-        google.accounts.id.initialize({
-          client_id: CLIENT_ID,
-          callback: (response) => onCredential(response.credential)
-        });
-        google.accounts.id.renderButton(gisContainerRef.current, {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          width: Math.min(400, Math.round(wrapperRef.current?.offsetWidth || 400))
-        });
-        setReady(true);
-      })
-      .catch((err) => toast.error(err.message));
+    loadGoogleIdentityServices().then((google) => {
+      if (isCancelled || !buttonRef.current) return;
+
+      google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: (response) => onCredential(response.credential),
+      });
+      google.accounts.id.renderButton(buttonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+      });
+    });
 
     return () => {
-      cancelled = true;
+      isCancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onCredential]);
 
-  if (!CLIENT_ID) return null;
+  return <div ref={buttonRef} />;
+};
 
-  return (
-    <div ref={wrapperRef} className="relative w-full h-[44px]">
-      <button
-        type="button"
-        tabIndex={-1}
-        aria-hidden="true"
-        disabled={disabled}
-        className="w-full h-full bg-surface-container-lowest border border-outline-variant text-on-surface rounded-lg flex items-center justify-center gap-md pointer-events-none"
-      >
-        <span className="font-body text-body-md font-medium">Continue with Google</span>
-      </button>
-      <div
-        ref={gisContainerRef}
-        className={`absolute inset-0 overflow-hidden rounded-lg opacity-0 ${ready && !disabled ? '' : 'pointer-events-none'}`}
-      />
-    </div>
-  );
-}
+export default GoogleSignInButton;

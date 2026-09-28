@@ -66,4 +66,14 @@ router.post('/logout', validate(schemas.logoutSchema), handler.logout);
 
 router.post('/logout-all', requireAuth, handler.logoutAll);
 
+router.get('/account', requireAuth, handler.getAccount);
+router.patch('/account', requireAuth, validate(schemas.updateAccountSchema), handler.updateAccount);
+router.post(
+  '/change-password',
+  requireAuth,
+  authAttemptLimiter,
+  validate(schemas.changePasswordSchema),
+  handler.changePassword
+);
+
 module.exports = router;

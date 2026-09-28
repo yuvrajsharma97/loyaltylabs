@@ -1,124 +1,120 @@
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { listStoreDisputes } from '../../api/storeOwner';
-import { resolveDispute } from '../../api/disputes';
-import { useStore } from './OwnerDashboard';
+import { useCallback, useState } from 'react';
+import * as storesApi from '../../api/stores';
+import * as disputesApi from '../../api/disputes';
+import { useAuth } from '../../shared/hooks/useAuth';
+import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
+import Pagination from '../../shared/components/Pagination';
+import ListPage from '../../shared/components/ListPage';
+import ScrollPanel from '../../shared/components/ScrollPanel';
+import { showSuccessToast } from '../../shared/utils/toast';
+import SegmentedControl from '../../shared/components/SegmentedControl';
 import Card from '../../shared/components/Card';
+import Badge from '../../shared/components/Badge';
+import Button from '../../shared/components/Button';
 import Modal from '../../shared/components/Modal';
+import EmptyState from '../../shared/components/EmptyState';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
-import { formatDate } from '../../shared/utils/formatters';
+import { formatDateTime } from '../../shared/utils/formatters';
+import { DISPUTE_TYPE_LABELS } from '../../shared/utils/labels';
 
-const TABS = [
+const STATUS_FILTERS = [
+  { value: '', label: 'All' },
   { value: 'open', label: 'Open' },
-  { value: 'resolved', label: 'Resolved' }
+  { value: 'resolved', label: 'Resolved' },
 ];
 
-export default function DisputesPanel() {
-  const { store } = useStore();
+const PAGE_SIZE = 10;
+
+const DisputesPanel = () => {
+  const { user: store } = useAuth();
   const [status, setStatus] = useState('open');
-  const [disputes, setDisputes] = useState(null);
-  const [resolving, setResolving] = useState(null);
+  const [resolvingDispute, setResolvingDispute] = useState(null);
   const [note, setNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const load = () => {
-    setDisputes(null);
-    listStoreDisputes(store._id, { status })
-      .then(setDisputes)
-      .catch((err) => toast.error(err.message || 'Could not load disputes'));
-  };
+  const fetchPage = useCallback(
+    (page) =>
+      storesApi
+        .listStoreDisputes(store._id, { status: status || undefined, page, limit: PAGE_SIZE })
+        .then(({ disputes, pagination }) => ({ items: disputes, pagination })),
+    [store._id, status]
+  );
+  const { items: disputes, pagination, setPage, isLoading, reload } = usePaginatedList(fetchPage);
 
-  useEffect(() => {
-    listStoreDisputes(store._id, { status })
-      .then(setDisputes)
-      .catch((err) => toast.error(err.message || 'Could not load disputes'));
-  }, [store._id, status]);
-
-  const handleResolve = async () => {
-    setSubmitting(true);
+  const handleResolve = async (event) => {
+    event.preventDefault();
+    setIsSaving(true);
     try {
-      await resolveDispute(resolving._id, note || undefined);
-      setResolving(null);
+      await disputesApi.resolveDispute(resolvingDispute._id, { ownerNote: note });
+      setResolvingDispute(null);
       setNote('');
-      load();
-      toast.success('Dispute resolved');
-    } catch (err) {
-      toast.error(err.message || 'Could not resolve dispute');
+      reload();
+      showSuccessToast('Dispute resolved.');
     } finally {
-      setSubmitting(false);
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-xl max-w-[1100px] mx-auto">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Disputes</h1>
+    <ListPage
+      header={
+        <>
+          <h1 className="text-page-title text-text-primary">Disputes</h1>
+          <SegmentedControl options={STATUS_FILTERS} value={status} onChange={setStatus} className="mt-4" />
+        </>
+      }
+      footer={<Pagination pagination={pagination} onPageChange={setPage} isDisabled={isLoading} itemLabel="disputes" />}
+    >
 
-      <div className="flex rounded-lg bg-surface-container-low p-1 gap-1 w-fit">
-        {TABS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setStatus(value)}
-            className={`px-xl py-sm rounded-md font-body text-body-sm font-semibold transition-colors ${
-              status === value ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {!disputes ? (
-        <LoadingSpinner />
-      ) : disputes.length === 0 ? (
-        <Card className="text-body-sm text-on-surface-variant">No {status} disputes.</Card>
+      {isLoading && disputes.length === 0 ? (
+        <LoadingSpinner className="py-16" />
       ) : (
-        <div className="flex flex-col gap-md">
-          {disputes.map((dispute) => (
-            <Card key={dispute._id} className="flex flex-col sm:flex-row items-start justify-between gap-lg">
-              <div className="flex flex-col gap-xs flex-1 min-w-0">
-                <p className="font-body text-body-sm font-semibold text-on-surface-variant uppercase">
-                  {dispute.transactionType}
-                </p>
-                <p className="text-body-md">{dispute.customerNote}</p>
-                <p className="text-body-sm text-on-surface-variant">{formatDate(dispute.createdAt)}</p>
+        <ScrollPanel resetKey={disputes[0]?._id} className="-mx-1 flex-1 px-1 py-1">
+          <div className={`flex flex-col gap-3 transition-opacity duration-150 ${isLoading ? 'opacity-50' : ''}`}>
+            {disputes.length === 0 && <EmptyState icon="flag" title="Nothing here" />}
+
+            {disputes.map((dispute) => (
+              <Card key={dispute._id}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={dispute.status === 'open' ? 'warning' : 'success'}>{dispute.status}</Badge>
+                    <span className="text-label text-text-secondary">
+                      {DISPUTE_TYPE_LABELS[dispute.transactionType] || dispute.transactionType}
+                    </span>
+                  </div>
+                  <span className="font-mono text-label text-text-muted">{formatDateTime(dispute.createdAt)}</span>
+                </div>
+                <p className="mt-2 text-body text-text-primary">{dispute.customerNote}</p>
                 {dispute.ownerNote && (
-                  <p className="text-body-sm text-on-surface-variant italic">Your note: {dispute.ownerNote}</p>
+                  <p className="mt-1 text-body-sm text-text-secondary">Your note: {dispute.ownerNote}</p>
                 )}
-              </div>
-              {status === 'open' && (
-                <button
-                  type="button"
-                  onClick={() => setResolving(dispute)}
-                  className="font-body text-body-sm font-semibold text-primary hover:underline shrink-0"
-                >
-                  Resolve
-                </button>
-              )}
-            </Card>
-          ))}
-        </div>
+                {dispute.status === 'open' && (
+                  <Button size="sm" variant="secondary" className="mt-3" onClick={() => setResolvingDispute(dispute)}>
+                    Resolve
+                  </Button>
+                )}
+              </Card>
+            ))}
+          </div>
+        </ScrollPanel>
       )}
 
-      <Modal
-        open={Boolean(resolving)}
-        title="Resolve this dispute?"
-        confirmText="Resolve"
-        confirming={submitting}
-        onConfirm={handleResolve}
-        onCancel={() => {
-          setResolving(null);
-          setNote('');
-        }}
-      >
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Optional note for your records"
-          rows={3}
-          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-md font-body text-body-md placeholder:text-outline outline-none focus:border-primary transition-all"
-        />
+      <Modal isOpen={Boolean(resolvingDispute)} onClose={() => setResolvingDispute(null)} title="Resolve dispute">
+        <form onSubmit={handleResolve} className="flex flex-col gap-3">
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="What did you do about this? (optional)"
+            rows={4}
+            className="rounded-input border border-border bg-surface p-3 text-body text-text-primary outline-none focus:border-primary"
+          />
+          <Button type="submit" isLoading={isSaving}>
+            Mark resolved
+          </Button>
+        </form>
       </Modal>
-    </div>
+    </ListPage>
   );
-}
+};
+
+export default DisputesPanel;

@@ -1,64 +1,64 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
-const ELEMENT_ID = 'till-qr-scanner';
+const SCANNER_ELEMENT_ID = 'till-qr-scanner';
 
-// Uses the imperative Html5Qrcode class (not Html5QrcodeScanner's built-in UI)
-// so we control exactly when the camera stops - must stop() before the
-// identify API call fires, not after, per the scan feature's Till Mode design.
-export default function ScannerView({ onDecode, onError, onCancel }) {
-  const scannerRef = useRef(null);
+// Uses the imperative Html5Qrcode class so we control exactly when the camera
+// stops - it must stop before the identify call fires, not after.
+const ScannerView = ({ onResult }) => {
+  const [cameraError, setCameraError] = useState(false);
 
   useEffect(() => {
-    const scanner = new Html5Qrcode(ELEMENT_ID);
-    scannerRef.current = scanner;
-    let stopped = false;
+    const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
+    let isStopped = false;
 
     // Html5Qrcode.stop() throws synchronously (not a rejected promise) when
-    // called on an already-stopped scanner - a plain .catch() on its return
-    // value can't catch that, since the throw happens before stop() returns
-    // anything to chain onto. The `stopped` flag avoids the redundant call
-    // altogether (decode callback stops it once; unmounting must not stop it
-    // again), and try/catch is the backstop that actually catches a sync throw.
+    // the scanner is already stopped or never finished starting, so a plain
+    // .catch() can't catch it. The flag avoids the redundant call; try/catch
+    // is the backstop for the sync throw.
     const stopScanner = async () => {
-      if (stopped) return;
-      stopped = true;
+      if (isStopped) return;
+      isStopped = true;
       try {
         await scanner.stop();
       } catch {
-        // Already stopped, or never finished starting - nothing to clean up.
+        // Already stopped - nothing to clean up.
       }
     };
 
     scanner
       .start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: 250 },
+        { fps: 10, qrbox: 240 },
         (decodedText) => {
-          if (stopped) return;
-          stopScanner().finally(() => onDecode(decodedText));
+          if (isStopped) return;
+          stopScanner().finally(() => onResult(decodedText));
+        },
+        () => {
+          // Fires every frame with no code found - not an error, ignore.
         }
       )
-      .catch((err) => {
-        onError(err?.message || 'Could not access the camera');
+      .catch(() => {
+        isStopped = true;
+        setCameraError(true);
       });
 
     return () => {
       stopScanner();
     };
+    // onResult identity changing shouldn't restart the camera stream.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <div className="flex flex-col gap-lg items-center">
-      <div id={ELEMENT_ID} className="w-full max-w-[360px] rounded-xl overflow-hidden" />
-      <button
-        type="button"
-        onClick={onCancel}
-        className="font-body text-body-sm font-semibold text-on-surface-variant hover:underline"
-      >
-        Cancel
-      </button>
-    </div>
-  );
-}
+  if (cameraError) {
+    return (
+      <p className="rounded-card border border-border bg-surface p-4 text-body-sm text-error-text">
+        Camera access was denied or no camera was found. Use manual entry instead.
+      </p>
+    );
+  }
+
+  return <div id={SCANNER_ELEMENT_ID} className="mx-auto w-full max-w-xs overflow-hidden rounded-card" />;
+};
+
+export default ScannerView;

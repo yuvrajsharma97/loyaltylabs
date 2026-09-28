@@ -1,132 +1,134 @@
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { listStores, updateStoreStatus, reconcileStore } from '../../api/admin';
+import { useCallback, useState } from 'react';
+import * as adminApi from '../../api/admin';
+import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
+import Pagination from '../../shared/components/Pagination';
+import ListPage from '../../shared/components/ListPage';
+import ScrollPanel from '../../shared/components/ScrollPanel';
+import SearchInput from '../../shared/components/SearchInput';
+import { showSuccessToast } from '../../shared/utils/toast';
+import SegmentedControl from '../../shared/components/SegmentedControl';
 import Card from '../../shared/components/Card';
-import Modal from '../../shared/components/Modal';
+import Badge from '../../shared/components/Badge';
 import Button from '../../shared/components/Button';
+import Modal from '../../shared/components/Modal';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
+import EmptyState from '../../shared/components/EmptyState';
+import Avatar from '../../shared/components/Avatar';
 import { formatDate } from '../../shared/utils/formatters';
 
-const TABS = [
-  { value: 'all', label: 'All' },
+const STATUS_FILTERS = [
+  { value: '', label: 'All' },
   { value: 'active', label: 'Active' },
-  { value: 'suspended', label: 'Suspended' }
+  { value: 'suspended', label: 'Suspended' },
 ];
 
-export default function AdminStores() {
-  const [status, setStatus] = useState('all');
-  const [stores, setStores] = useState(null);
+const PAGE_SIZE = 10;
+
+const AdminStores = () => {
+  const [status, setStatus] = useState('');
+  const [query, setQuery] = useState('');
+  const [reconcilingStore, setReconcilingStore] = useState(null);
+  const [discrepancies, setDiscrepancies] = useState(null);
+  const [isReconciling, setIsReconciling] = useState(false);
   const [statusChange, setStatusChange] = useState(null); // { store, nextStatus }
-  const [reconciling, setReconciling] = useState(null); // store
-  const [reconcileResult, setReconcileResult] = useState(null); // { discrepancies, requiresConfirm }
-  const [submitting, setSubmitting] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const search = useDebouncedValue(query.trim());
 
-  const load = () => {
-    listStores({ status: status === 'all' ? undefined : status })
-      .then(setStores)
-      .catch((err) => toast.error(err.message || 'Could not load stores'));
-  };
+  const fetchPage = useCallback(
+    (page) =>
+      adminApi
+        .listStores({ status: status || undefined, search: search || undefined, page, limit: PAGE_SIZE })
+        .then(({ stores, pagination }) => ({ items: stores, pagination })),
+    [status, search]
+  );
+  const { items: stores, pagination, setPage, isLoading, reload: loadStores } = usePaginatedList(fetchPage);
 
-  useEffect(load, [status]);
-
-  const handleStatusChange = async () => {
-    setSubmitting(true);
+  const handleConfirmStatusChange = async () => {
+    const { store, nextStatus } = statusChange;
+    setIsChangingStatus(true);
     try {
-      await updateStoreStatus(statusChange.store._id, statusChange.nextStatus);
+      await adminApi.updateStoreStatus(store._id, nextStatus);
       setStatusChange(null);
-      load();
-      toast.success(statusChange.nextStatus === 'suspended' ? 'Store suspended' : 'Store reactivated');
-    } catch (err) {
-      toast.error(err.message || 'Could not update store status');
+      loadStores();
+      showSuccessToast(nextStatus === 'suspended' ? `${store.name} suspended.` : `${store.name} reactivated.`);
     } finally {
-      setSubmitting(false);
+      setIsChangingStatus(false);
     }
   };
 
-  const startReconcile = async (store) => {
-    setReconciling(store);
+  const openReconcile = async (store) => {
+    setReconcilingStore(store);
+    setDiscrepancies(null);
     try {
-      const result = await reconcileStore(store._id, false);
-      if (!result.requiresConfirm) {
-        toast.success('No discrepancies found');
-        setReconciling(null);
-        return;
-      }
-      setReconcileResult(result);
+      const result = await adminApi.reconcileStore(store._id, { confirm: false });
+      setDiscrepancies(result.discrepancies);
     } catch (err) {
-      toast.error(err.message || 'Could not run reconciliation');
-      setReconciling(null);
+      setReconcilingStore(null);
+      throw err;
     }
   };
 
-  const confirmReconcile = async () => {
-    setSubmitting(true);
+  const handleConfirmReconcile = async () => {
+    setIsReconciling(true);
     try {
-      const { corrected } = await reconcileStore(reconciling._id, true);
-      toast.success(`Corrected ${corrected} discrepanc${corrected === 1 ? 'y' : 'ies'}`);
-      setReconciling(null);
-      setReconcileResult(null);
-    } catch (err) {
-      toast.error(err.message || 'Could not apply corrections');
+      const result = await adminApi.reconcileStore(reconcilingStore._id, { confirm: true });
+      showSuccessToast(`Corrected ${result.corrected} balance(s).`);
+      setReconcilingStore(null);
     } finally {
-      setSubmitting(false);
+      setIsReconciling(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-xl max-w-[1100px] mx-auto">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Stores</h1>
+    <ListPage
+      maxWidthClassName="max-w-3xl"
+      header={
+        <>
+          <h1 className="text-page-title text-text-primary">Stores</h1>
+          <div className="mt-4 flex flex-col gap-3 wide:flex-row wide:items-center">
+            <div className="wide:flex-1">
+              <SearchInput
+                placeholder="Search stores by name"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
+            <SegmentedControl options={STATUS_FILTERS} value={status} onChange={setStatus} />
+          </div>
+        </>
+      }
+      footer={<Pagination pagination={pagination} onPageChange={setPage} isDisabled={isLoading} itemLabel="stores" />}
+    >
+      {isLoading && stores.length === 0 && <LoadingSpinner className="py-16" />}
 
-      <div className="flex rounded-lg bg-surface-container-low p-1 gap-1 w-fit">
-        {TABS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setStatus(value)}
-            className={`px-xl py-sm rounded-md font-body text-body-sm font-semibold transition-colors ${
-              status === value ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <ScrollPanel resetKey={stores[0]?._id} className="-mx-1 flex-1 px-1 py-1">
+        <div className={`flex flex-col gap-3 transition-opacity duration-150 ${isLoading ? 'opacity-50' : ''}`}>
+          {!isLoading && stores.length === 0 && <EmptyState icon="storefront" title="No stores found" />}
 
-      {!stores ? (
-        <LoadingSpinner />
-      ) : stores.length === 0 ? (
-        <Card className="text-body-sm text-on-surface-variant">No stores found.</Card>
-      ) : (
-        <div className="flex flex-col gap-md">
           {stores.map((store) => (
-            <Card key={store._id} className="flex flex-col sm:flex-row items-start justify-between gap-lg">
-              <div className="flex flex-col gap-xs flex-1 min-w-0">
-                <div className="flex items-center gap-sm">
-                  <p className="font-body text-body-md font-semibold">{store.name}</p>
-                  <span
-                    className={`font-mono text-label-mono uppercase px-xs py-[2px] rounded ${
-                      store.status === 'active'
-                        ? 'bg-primary-container text-on-primary-container'
-                        : 'bg-error-container text-on-error-container'
-                    }`}
-                  >
-                    {store.status}
-                  </span>
+            <Card key={store._id} className="flex flex-col gap-3 wide:flex-row wide:items-center wide:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar name={store.name} shape="square" imageUrl={store.logoUrl} />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-card-title text-text-primary">{store.name}</p>
+                    <Badge tone={store.status === 'active' ? 'success' : 'error'}>{store.status}</Badge>
+                  </div>
+                  <p className="truncate text-body-sm text-text-secondary">
+                    {[store.address, `Created ${formatDate(store.createdAt)}`].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
-                <p className="text-body-sm text-on-surface-variant">Created {formatDate(store.createdAt)}</p>
               </div>
-              <div className="flex gap-md shrink-0">
-                <Button size="sm" variant="text" onClick={() => startReconcile(store)}>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={() => openReconcile(store)}>
                   Reconcile
                 </Button>
                 <Button
                   size="sm"
                   variant={store.status === 'active' ? 'danger' : 'primary'}
                   onClick={() =>
-                    setStatusChange({
-                      store,
-                      nextStatus: store.status === 'active' ? 'suspended' : 'active'
-                    })
+                    setStatusChange({ store, nextStatus: store.status === 'active' ? 'suspended' : 'active' })
                   }
                 >
                   {store.status === 'active' ? 'Suspend' : 'Reactivate'}
@@ -135,37 +137,63 @@ export default function AdminStores() {
             </Card>
           ))}
         </div>
-      )}
+      </ScrollPanel>
 
       <Modal
-        open={Boolean(statusChange)}
+        isOpen={Boolean(statusChange)}
+        onClose={() => setStatusChange(null)}
         title={statusChange?.nextStatus === 'suspended' ? 'Suspend this store?' : 'Reactivate this store?'}
-        confirmText={statusChange?.nextStatus === 'suspended' ? 'Suspend' : 'Reactivate'}
-        confirmVariant={statusChange?.nextStatus === 'suspended' ? 'danger' : 'primary'}
-        confirming={submitting}
-        onConfirm={handleStatusChange}
-        onCancel={() => setStatusChange(null)}
       >
-        {statusChange?.nextStatus === 'suspended'
-          ? 'Pending redemptions will be cancelled and points restored. This can be reversed later.'
-          : 'This store will become active again immediately.'}
+        <div className="flex flex-col gap-4">
+          <p className="text-body text-text-secondary">
+            {statusChange?.nextStatus === 'suspended'
+              ? `${statusChange?.store.name} will stop earning and redeeming immediately. Pending reward codes are cancelled and their points refunded to customers. You can reactivate it later.`
+              : `${statusChange?.store.name} will be able to earn and redeem again straight away.`}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setStatusChange(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant={statusChange?.nextStatus === 'suspended' ? 'danger' : 'primary'}
+              className="flex-1"
+              isLoading={isChangingStatus}
+              onClick={handleConfirmStatusChange}
+            >
+              {statusChange?.nextStatus === 'suspended' ? 'Suspend store' : 'Reactivate store'}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
-      <Modal
-        open={Boolean(reconciling) && Boolean(reconcileResult)}
-        title="Discrepancies found"
-        confirmText="Apply corrections"
-        confirming={submitting}
-        onConfirm={confirmReconcile}
-        onCancel={() => {
-          setReconciling(null);
-          setReconcileResult(null);
-        }}
-      >
-        {reconcileResult?.discrepancies.length} customer balance
-        {reconcileResult?.discrepancies.length === 1 ? '' : 's'} out of sync with the ledger for{' '}
-        {reconciling?.name}. Apply corrections to fix them?
+      <Modal isOpen={Boolean(reconcilingStore)} onClose={() => setReconcilingStore(null)} title="Reconcile balances">
+        {discrepancies === null ? (
+          <LoadingSpinner className="py-8" />
+        ) : discrepancies.length === 0 ? (
+          <p className="text-body text-text-secondary">No discrepancies found - balances match the ledger.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-body-sm text-text-secondary">
+              {discrepancies.length} membership balance(s) don&apos;t match the ledger.
+            </p>
+            <div className="flex flex-col gap-2">
+              {discrepancies.map((item) => (
+                <div key={item._id} className="flex justify-between text-body-sm tabular-nums">
+                  <span className="text-text-secondary">Customer •••{item.customerId.slice(-4)}</span>
+                  <span className="text-text-primary">
+                    {item.actualBalance} → {item.expectedBalance}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <Button isLoading={isReconciling} onClick={handleConfirmReconcile}>
+              Apply corrections
+            </Button>
+          </div>
+        )}
       </Modal>
-    </div>
+    </ListPage>
   );
-}
+};
+
+export default AdminStores;

@@ -7,9 +7,9 @@ const Membership = require('../memberships/membership.model');
 const PointTransaction = require('../transactions/transaction.model');
 const Redemption = require('../redemptions/redemption.model');
 const Dispute = require('../disputes/dispute.model');
+const Store = require('../stores/store.model');
+const { parsePagination, paginateQuery } = require('../../shared/utils/pagination');
 
-const MAX_TRANSACTIONS_LIMIT = 100;
-const DEFAULT_TRANSACTIONS_LIMIT = 20;
 const MAX_OPEN_DISPUTES = 3;
 
 /**
@@ -26,9 +26,20 @@ const getMe = asyncHandler(async (req, res) => {
     throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
   }
 
-  const memberships = await Membership.find({ customerId: customer._id }).select(
-    'storeId pointsBalance tier joinedAt lastActivityAt'
-  );
+  const memberships = await Membership.find({ customerId: customer._id })
+    .select('storeId pointsBalance tier joinedAt lastActivityAt')
+    .lean();
+
+  // Attach a small store summary to each membership so the client can show
+  // shop names without paging through the whole public directory. storeId
+  // stays a plain id; `store` is null if the store was since deleted.
+  const stores = await Store.find({ _id: { $in: memberships.map((m) => m.storeId) } })
+    .select('name address logoUrl category status')
+    .lean();
+  const storeById = new Map(stores.map((store) => [String(store._id), store]));
+  memberships.forEach((membership) => {
+    membership.store = storeById.get(String(membership.storeId)) || null;
+  });
 
   res.json({
     success: true,
@@ -86,23 +97,17 @@ const getQrToken = asyncHandler(async (req, res) => {
 });
 
 /**
- * Cursor-paginated ledger history. Defaults to every store the customer
+ * Page-paginated ledger history. Defaults to every store the customer
  * belongs to (each entry carries its own storeId for client-side
  * grouping/filtering) - pass storeId to scope it to one shop's visit history
  * instead (e.g. a "recent visits" card on that shop's detail page).
  * @route GET /customers/me/transactions
  * @access Private (customer)
- * @query {number} [limit=20]
- * @query {string} [before] - ISO createdAt cursor; returns older entries
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  * @query {string} [storeId] - scope to a single store
  */
 const getTransactions = asyncHandler(async (req, res) => {
-  const parsedLimit = parseInt(req.query.limit, 10);
-  const limit = Math.min(
-    Number.isNaN(parsedLimit) || parsedLimit <= 0 ? DEFAULT_TRANSACTIONS_LIMIT : parsedLimit,
-    MAX_TRANSACTIONS_LIMIT
-  );
-
   const filter = { customerId: req.auth.id };
   if (req.query.storeId) {
     if (!isValidObjectId(req.query.storeId)) {
@@ -110,22 +115,15 @@ const getTransactions = asyncHandler(async (req, res) => {
     }
     filter.storeId = req.query.storeId;
   }
-  if (req.query.before) {
-    const before = new Date(req.query.before);
-    if (!Number.isNaN(before.getTime())) {
-      filter.createdAt = { $lt: before };
-    }
-  }
 
-  const transactions = await PointTransaction.find(filter).sort({ createdAt: -1 }).limit(limit);
+  const { items: transactions, pagination } = await paginateQuery(
+    PointTransaction,
+    filter,
+    parsePagination(req.query),
+    { sort: { createdAt: -1, _id: -1 } }
+  );
 
-  res.json({
-    success: true,
-    data: {
-      transactions,
-      nextCursor: transactions.length === limit ? transactions[transactions.length - 1].createdAt : null
-    }
-  });
+  res.json({ success: true, data: { transactions, pagination } });
 });
 
 /**

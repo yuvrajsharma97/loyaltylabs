@@ -1,39 +1,43 @@
-import Button from './Button';
+import { useEffect } from 'react';
+import IconButton from './IconButton';
+import Icon from './Icon';
 
-// Generic confirm/cancel dialog - used for delete-reward, resolve-dispute,
-// cancel-redemption, and redemption-confirm flows across both dashboards.
-export default function Modal({
-  open,
-  title,
-  children,
-  confirmText = 'Confirm',
-  confirmVariant = 'primary',
-  onConfirm,
-  confirming = false,
-  onCancel,
-  cancelText = 'Cancel'
-}) {
-  if (!open) return null;
+// One component, two appearances: a bottom sheet on mobile (<960px) and a
+// centered dialog on desktop (>=960px) - same open/close contract either
+// way. Chrome elsewhere on the page should flatten to opaque while this is
+// open so glass layers never compound (see each AppShell).
+const Modal = ({ isOpen, onClose, title, children, className = '' }) => {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/40 px-container-margin">
-      <div className="w-full max-w-[440px] max-h-[85vh] overflow-y-auto bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-xl flex flex-col gap-lg">
-        {title && <h2 className="font-display text-headline-sm text-on-surface">{title}</h2>}
-        <div className="font-body text-body-md text-on-surface-variant">{children}</div>
-        <div className="flex gap-md justify-end">
-          <Button variant="text" onClick={onCancel} className="px-lg">
-            {cancelText}
-          </Button>
-          <Button
-            variant={confirmVariant}
-            onClick={onConfirm}
-            loading={confirming}
-            className="px-lg"
-          >
-            {confirmText}
-          </Button>
-        </div>
+    <div className="fixed inset-0 z-50">
+      <div className="glass-scrim absolute inset-0" onClick={onClose} />
+      <div
+        className={`glass-overlay absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-sheet border border-border p-6 shadow-sheet rail:inset-0 rail:m-auto rail:h-fit rail:max-w-md rail:rounded-card rail:shadow-dialog ${className}`}
+      >
+        <div className="mx-auto mb-4 h-1 w-9 rounded-pill bg-border-strong rail:hidden" />
+        {title && (
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-section text-text-primary">{title}</h2>
+            <IconButton label="Close" onClick={onClose}>
+              <Icon name="close" />
+            </IconButton>
+          </div>
+        )}
+        {children}
       </div>
     </div>
   );
-}
+};
+
+export default Modal;

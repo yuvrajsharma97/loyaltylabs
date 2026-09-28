@@ -1,91 +1,130 @@
 import { useState } from 'react';
-import toast from 'react-hot-toast';
-import { updateMe } from '../../api/customer';
+import * as customerApi from '../../api/customer';
 import { useAuth } from '../../shared/hooks/useAuth';
-import { useCustomer } from './CustomerDashboard';
+import { showErrorToast, showSuccessToast } from '../../shared/utils/toast';
+import { CATEGORIES } from '../../shared/utils/labels';
 import Card from '../../shared/components/Card';
+import Input from '../../shared/components/Input';
 import Button from '../../shared/components/Button';
+import Avatar from '../../shared/components/Avatar';
+import Icon from '../../shared/components/Icon';
+import ChangePasswordCard from '../../shared/components/ChangePasswordCard';
+import SessionsCard from '../../shared/components/SessionsCard';
 
-const CATEGORIES = [
-  { value: 'cafe', label: 'Cafe' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'services', label: 'Services' },
-  { value: 'other', label: 'Other' }
-];
+const AccountSettings = () => {
+  const { user, refreshProfile } = useAuth();
 
-export default function AccountSettings() {
-  const { logout } = useAuth();
-  const { me, refetch } = useCustomer();
-  const [phone, setPhone] = useState(me.phone || '');
-  const [interests, setInterests] = useState(me.interests || []);
-  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [interests, setInterests] = useState(user?.interests || []);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const hasChanges =
+    name.trim() !== (user?.name || '') ||
+    phone.trim() !== (user?.phone || '') ||
+    [...interests].sort().join() !== [...(user?.interests || [])].sort().join();
 
   const toggleInterest = (value) => {
-    setInterests((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+    setInterests((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSave = async (event) => {
+    event.preventDefault();
+    if (!name.trim()) {
+      showErrorToast('Name cannot be empty.');
+      return;
+    }
+    setIsSaving(true);
     try {
-      await updateMe({ phone: phone || undefined, interests });
-      await refetch();
-      toast.success('Saved');
-    } catch (err) {
-      toast.error(err.message || 'Could not save changes');
+      await customerApi.updateMe({ name: name.trim(), phone: phone.trim(), interests });
+      await refreshProfile();
+      showSuccessToast('Profile updated.');
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-xl max-w-[560px] mx-auto">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Account</h1>
+    <div className="mx-auto max-w-2xl px-4 py-6">
+      <h1 className="text-page-title text-text-primary">Account</h1>
+      <p className="mt-1 text-body-sm text-text-secondary">Your details, password and signed-in devices.</p>
 
-      <Card className="flex flex-col gap-lg">
-        <div className="space-y-xs">
-          <label className="font-body text-body-sm text-on-surface-variant ml-xs">Name</label>
-          <p className="px-md py-md font-body text-body-md">{me.name}</p>
-        </div>
-        <div className="space-y-xs">
-          <label className="font-body text-body-sm text-on-surface-variant ml-xs">Email</label>
-          <p className="px-md py-md font-body text-body-md">{me.email}</p>
-        </div>
-        <div className="space-y-xs">
-          <label className="font-body text-body-sm text-on-surface-variant ml-xs">Phone</label>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+1 555 012 3456"
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-md font-body text-body-md placeholder:text-outline outline-none focus:border-primary transition-all"
-          />
-        </div>
-        <div className="space-y-xs">
-          <label className="font-body text-body-sm text-on-surface-variant ml-xs">Interests</label>
-          <div className="grid grid-cols-2 gap-sm">
-            {CATEGORIES.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => toggleInterest(value)}
-                className={`py-md rounded-lg font-body text-body-sm font-semibold border-2 transition-all ${
-                  interests.includes(value)
-                    ? 'border-primary bg-primary-container/20 text-primary'
-                    : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+      <div className="mt-5 flex flex-col gap-4">
+        <Card>
+          <div className="flex items-center gap-3">
+            <Avatar name={name || user?.name} size="lg" />
+            <div className="min-w-0">
+              <p className="truncate text-card-title text-text-primary">{name || user?.name}</p>
+              <p className="truncate text-body-sm text-text-secondary">{user?.email}</p>
+            </div>
           </div>
-        </div>
-        <Button loading={saving} onClick={handleSave}>
-          Save changes
-        </Button>
-      </Card>
 
-      <Button variant="text" onClick={logout} className="w-fit mx-auto px-xl border border-outline-variant">
-        Log out
-      </Button>
+          <form onSubmit={handleSave} className="mt-5 flex flex-col gap-4">
+            <Input
+              label="Full name"
+              autoComplete="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="w-full"
+              required
+            />
+            <div className="flex flex-col gap-1.5">
+              <Input label="Email" type="email" value={user?.email || ''} disabled readOnly className="w-full" />
+              <span className="flex items-center gap-1 text-body-sm text-text-muted">
+                <Icon name="lock" style={{ fontSize: '0.95rem' }} />
+                Your email is your sign-in, so it can&apos;t be changed here.
+              </span>
+            </div>
+            <Input
+              label="Phone (optional)"
+              type="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              className="w-full"
+            />
+
+            <div>
+              <span className="text-label text-text-secondary">Interests</span>
+              <p className="text-body-sm text-text-muted">We use these to suggest shops you might like.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {CATEGORIES.map((option) => {
+                  const isSelected = interests.includes(option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => toggleInterest(option.value)}
+                      className={`flex items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-label transition-colors duration-150 ${
+                        isSelected
+                          ? 'border-primary bg-primary-tint text-primary'
+                          : 'border-border bg-surface text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      <Icon name={option.icon} style={{ fontSize: '1.05rem' }} />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Button type="submit" isLoading={isSaving} disabled={!hasChanges} className="self-start">
+              Save changes
+            </Button>
+          </form>
+        </Card>
+
+        {/* Google-only customers have no password yet - they can set one. */}
+        <ChangePasswordCard hasPassword={user?.authProvider !== 'google'} onPasswordChanged={refreshProfile} />
+
+        <SessionsCard />
+      </div>
     </div>
   );
-}
+};
+
+export default AccountSettings;

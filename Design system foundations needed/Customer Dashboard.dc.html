@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDF1F3;color:#1C1F16;font-family:Geist,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2B5748;text-decoration:none}
+a:hover{color:#1C3A2E;text-decoration:underline}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{opacity:.5}50%{opacity:.9}100%{opacity:.5}}
+</style>
+</helmet>
+
+<div style="padding:48px 44px 120px;display:flex;flex-direction:column;gap:36px;width:max-content;min-width:100%">
+
+<header style="display:flex;flex-direction:column;gap:14px;max-width:800px">
+<span style="font:500 12px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#6E7679">Prototype · customer dashboard · v0.1</span>
+<h1 style="margin:0;font:600 38px/1.08 Geist,sans-serif;letter-spacing:-.028em">Customer dashboard, end to end</h1>
+<p style="margin:0;font:400 16px/1.6 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Five destinations, fully live: browse and subscribe, collect stamps, present your code, redeem a reward through its confirmation flow, and read your history. Built only from the foundation tokens and the Store Card component. Tap the bottom nav; every control works.</p>
+</header>
+
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Mobile · 390 · source of truth</span>
+<div style="width:390px;height:820px;box-sizing:border-box;border:1px solid #C9D1D4;border-radius:26px;background:#F5F7F8;overflow:hidden;position:relative;display:flex;flex-direction:column">
+
+<div style="position:absolute;top:0;left:0;right:0;z-index:3;padding:14px 16px 12px;border-bottom:1px solid #E1E6E8;display:flex;align-items:center;justify-content:space-between;gap:12px;{{ chromeGlass }}">
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">{{ screenKicker }}</span>
+<span style="font:600 20px/1.2 Geist,sans-serif;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ screenTitle }}</span>
+</div>
+<span style="width:40px;height:40px;flex:none;border-radius:10px;background:#EBE3A7;display:flex;align-items:center;justify-content:center;position:relative"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.2a3.4 3.4 0 0 0-3.4 3.4c0 3.3-1.4 4.3-1.4 4.3h9.6s-1.4-1-1.4-4.3A3.4 3.4 0 0 0 9 3.2ZM7.6 13.4a1.5 1.5 0 0 0 2.8 0" stroke="#4E5346" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:#FFF78D;border:1.5px solid #6B6320"></span></span>
+</div>
+
+<div style="flex:1;overflow-y:auto;padding:80px 16px 96px;display:flex;flex-direction:column;gap:12px">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="background:#2B5748;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,247,248,.65)">Total balance</span>
+<div style="display:flex;align-items:baseline;gap:8px">
+<span style="font:600 42px/1 Geist,sans-serif;letter-spacing:-.03em;color:#F5F7F8;font-variant-numeric:tabular-nums">{{ pointsDisplay }}</span>
+<span style="font:500 15px/1 Geist,sans-serif;color:rgba(245,247,248,.72)">pts</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding-top:13px;border-top:1px solid rgba(245,247,248,.16)">
+<span style="display:flex;align-items:center;gap:7px;font:500 13.5px/1 Geist,sans-serif;color:#F5F7F8;font-variant-numeric:tabular-nums"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 11.5V2.5M7 2.5L3 6.5M7 2.5l4 4" stroke="#FFF78D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>+240 this month</span>
+<span style="font:500 13px/1 Geist,sans-serif;color:rgba(245,247,248,.72);font-variant-numeric:tabular-nums">{{ cashValue }} value</span>
+</div>
+</div>
+
+<sc-if value="{{ hasReady }}" hint-placeholder-val="{{ true }}">
+<div style="background:#FFF78D;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+<span style="width:34px;height:34px;flex:none;border-radius:8px;background:rgba(107,99,32,.14);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 8.5h10v6H4zM4 8.5l1.4-3h7.2l1.4 3M9 5.5v9" stroke="#5A5410" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font:600 14.5px/1.25 Geist,sans-serif;color:#3F3A08">{{ readyCount }} rewards ready</span>
+<span style="font:400 12.5px/1.3 Geist,sans-serif;color:#5A5410">Enough points to claim now</span>
+</div>
+<button type="button" onClick="{{ goRewards }}" style="height:40px;padding:0 14px;flex:none;border:1px solid #5A5410;border-radius:8px;background:transparent;color:#3F3A08;font:600 13.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:rgba(90,84,16,.1)" style-active="background:rgba(90,84,16,.18)" style-focus="outline:2px solid #5A5410;outline-offset:2px">View</button>
+</div>
+</sc-if>
+
+<div style="display:flex;gap:10px">
+<button type="button" onClick="{{ goCode }}" style="flex:1;height:48px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;display:inline-flex;align-items:center;justify-content:center;gap:8px" style-hover="background:#234739" style-active="background:#1C3A2E" style-focus="outline:2px solid #2B5748;outline-offset:2px"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 3h5v5H3zM10 3h5v5h-5zM3 10h5v5H3zM10 10h5v5h-5z" stroke="#F5F7F8" stroke-width="1.4" stroke-linejoin="round"/></svg>Show my code</button>
+<button type="button" onClick="{{ goStores }}" style="flex:1;height:48px;border:1px solid #CBDAD4;border-radius:8px;background:#fff;color:#234739;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#E4EDEA" style-active="background:#DCE7E3" style-focus="outline:2px solid #2B5748;outline-offset:2px">Browse shops</button>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+<span style="font:600 16px/1.25 Geist,sans-serif">Rye &amp; Co. Bakery</span>
+<span style="font:400 13px/1.3 Geist,sans-serif;color:#6E7679">{{ stampsLeftLabel }}</span>
+</div>
+<span style="font:500 12px/1 'Geist Mono',monospace;padding:6px 9px;border-radius:999px;background:#EBE3A7;color:#6B6320;white-space:nowrap">{{ stampProgressLabel }}</span>
+</div>
+<div style="display:flex;gap:7px">
+<sc-for list="{{ stampSlots }}" as="s" hint-placeholder-count="8">
+<span style="flex:1;height:32px;border-radius:8px;background:{{ s.bg }};border:1px {{ s.borderStyle }} {{ s.border }}"></span>
+</sc-for>
+</div>
+<button type="button" onClick="{{ addStamp }}" style="height:44px;border:1px solid #CBDAD4;border-radius:8px;background:#fff;color:#234739;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#E4EDEA" style-active="background:#DCE7E3" style-focus="outline:2px solid #2B5748;outline-offset:2px">Simulate a scan</button>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between">
+<span style="font:600 15px/1 Geist,sans-serif">Recent activity</span>
+<button type="button" onClick="{{ goActivity }}" style="height:32px;padding:0 8px;border:none;border-radius:6px;background:transparent;color:#2B5748;font:600 13px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#E4EDEA" style-focus="outline:2px solid #2B5748;outline-offset:2px">View all</button>
+</div>
+<sc-for list="{{ recent }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #EDF0F2;min-height:48px;transition:background .16s ease" style-hover="background:#FAFBFC">
+<span style="width:34px;height:34px;border-radius:8px;background:#F5F7F8;border:1px solid #E1E6E8;flex:none;display:flex;align-items:center;justify-content:center;font:500 12px 'Geist Mono',monospace;color:#4E5346">{{ a.initials }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font:500 14.5px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span>
+<span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">{{ a.meta }}</span>
+</div>
+<span style="font:600 15px/1 Geist,sans-serif;font-variant-numeric:tabular-nums;color:{{ a.color }};white-space:nowrap">{{ a.amount }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStores }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:9px">
+<span style="flex:1;height:44px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="4.6" stroke="#6E7679" stroke-width="1.4"/><path d="M11.5 11.5L15 15" stroke="#6E7679" stroke-width="1.4" stroke-linecap="round"/></svg><span style="font:400 14.5px/1 Geist,sans-serif;color:#8A9195">Search shops</span></span>
+<button type="button" style="width:44px;height:44px;flex:none;border:1px solid #CBD3D6;border-radius:8px;background:#fff;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;display:inline-flex;align-items:center;justify-content:center" style-hover="background:#F5F7F8" style-focus="outline:2px solid #2B5748;outline-offset:2px"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 5h12M5.5 9h7M7.5 13h3" stroke="#4E5346" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+</div>
+<div style="display:flex;gap:7px">
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+<button type="button" onClick="{{ f.select }}" style="{{ f.style }}">{{ f.label }}</button>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<sc-for list="{{ stores }}" as="c" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:16px;box-shadow:0 1px 2px rgba(28,31,22,.04);transition:box-shadow .18s ease,transform .18s ease,border-color .18s ease;padding:8px;min-width:0;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#CBD3D6;box-shadow:0 10px 22px -12px rgba(28,31,22,.22);transform:translateY(-2px)">
+<div style="position:relative;aspect-ratio:4/5;border-radius:12px;overflow:hidden;background:{{ c.imgBg }};background-image:{{ c.imgPattern }};display:flex;align-items:center;justify-content:center">
+<span style="{{ c.imgLabelStyle }}">{{ c.imgLabel }}</span>
+<sc-if value="{{ c.subscribed }}" hint-placeholder-val="{{ false }}">
+<span style="position:absolute;top:9px;left:9px;right:9px;display:flex;justify-content:center"><span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.75);color:#1C3A2E;border-radius:999px;padding:5px 9px;font:500 11.5px/1 Geist,sans-serif"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7.4l3 2.9 5-6" stroke="#1C3A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Subscribed</span></span>
+</sc-if>
+</div>
+<div style="padding:0 3px;display:flex;align-items:center;gap:5px;min-width:0">
+<span style="min-width:0;font:600 15px/1.25 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+<sc-if value="{{ c.subscribed }}" hint-placeholder-val="{{ false }}">
+<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" style="flex:none"><circle cx="7" cy="7" r="6.2" fill="#E4EDEA"/><path d="M4.2 7.2l2 1.9 3.6-4.2" stroke="#2B5748" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</sc-if>
+</div>
+<sc-if value="{{ c.subscribed }}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{ c.toggle }}" style="height:44px;border:1px solid #CBDAD4;border-radius:999px;background:#E4EDEA;color:#234739;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px" style-hover="background:#DCE7E3;border-color:#B9CCC5" style-active="background:#CFE0DA;transform:scale(.985)" style-focus="outline:2px solid #2B5748;outline-offset:2px"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7.4l3 2.9 5-6" stroke="#234739" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>{{ c.btnLabel }}</button>
+</sc-if>
+<sc-if value="{{ c.notSubscribed }}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{ c.toggle }}" style="height:44px;border:none;border-radius:999px;background:#2B5748;color:#F5F7F8;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;width:100%" style-hover="background:#234739" style-active="background:#1C3A2E;transform:scale(.985)" style-focus="outline:2px solid #2B5748;outline-offset:2px">{{ c.btnLabel }}</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCode }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:20px 16px;display:flex;flex-direction:column;gap:14px;align-items:center">
+<span style="display:inline-flex;align-items:center;gap:6px;font:500 12px/1 'Geist Mono',monospace;color:#234739;background:#E4EDEA;padding:6px 10px;border-radius:999px"><span style="width:6px;height:6px;border-radius:50%;background:#2B5748"></span>Live · refreshes in 0:42</span>
+<div style="width:222px;height:222px;border-radius:12px;background:#F5F7F8;border:1px solid #E1E6E8;position:relative;display:flex;align-items:center;justify-content:center;background-image:repeating-linear-gradient(90deg,#DDE3E6 0 7px,transparent 7px 14px),repeating-linear-gradient(0deg,#DDE3E6 0 7px,transparent 7px 14px);background-size:14px 14px">
+<span style="position:absolute;top:16px;left:16px;width:40px;height:40px;border:7px solid #1C1F16;border-radius:4px"></span>
+<span style="position:absolute;top:16px;right:16px;width:40px;height:40px;border:7px solid #1C1F16;border-radius:4px"></span>
+<span style="position:absolute;bottom:16px;left:16px;width:40px;height:40px;border:7px solid #1C1F16;border-radius:4px"></span>
+<span style="font:500 11px/1 'Geist Mono',monospace;color:#4E5346;background:#F5F7F8;padding:6px 8px;border-radius:4px;position:relative">QR placeholder</span>
+</div>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#4E5346;text-align:center;max-width:30ch;text-wrap:pretty">Show this at the counter to collect points. Brightness boosts automatically.</span>
+<span style="font:500 15px/1 'Geist Mono',monospace;letter-spacing:.14em;color:#1C1F16;background:#EBE3A7;padding:9px 14px;border-radius:8px">AM-4821-K9</span>
+</div>
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 15px/1 Geist,sans-serif">Or scan a shop's code</span>
+<button type="button" style="height:48px;border:1px solid #CBDAD4;border-radius:8px;background:#fff;color:#234739;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;display:inline-flex;align-items:center;justify-content:center;gap:8px" style-hover="background:#E4EDEA" style-active="background:#DCE7E3" style-focus="outline:2px solid #2B5748;outline-offset:2px"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 6.5V3h3.5M15 6.5V3h-3.5M3 11.5V15h3.5M15 11.5V15h-3.5" stroke="#234739" stroke-width="1.5" stroke-linecap="round"/></svg>Open scanner</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRewards }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="background:#EBE3A7;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+<span style="font:500 13.5px/1 Geist,sans-serif;color:#4E5346">Balance</span>
+<span style="font:600 19px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ pointsDisplay }} pts</span>
+</div>
+<sc-for list="{{ rewards }}" as="r" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font:600 16px/1.25 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+<span style="font:400 13.5px/1.4 Geist,sans-serif;color:#4E5346;font-variant-numeric:tabular-nums">{{ r.meta }}</span>
+</div>
+<span style="{{ r.pillStyle }}">{{ r.pillLabel }}</span>
+</div>
+<sc-if value="{{ r.locked }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="height:6px;border-radius:999px;background:#EDF0F2;overflow:hidden;display:block"><span style="display:block;height:6px;border-radius:999px;background:#FFF78D;width:{{ r.progress }}"></span></span>
+<span style="font:400 12.5px/1 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">{{ r.shortBy }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ r.locked }}" hint-placeholder-val="{{ false }}"><button type="button" disabled="true" style="height:48px;border:none;border-radius:8px;font:600 15px Geist,sans-serif;width:100%;background:#EDF0F2;color:#9AA1A4;cursor:not-allowed">{{ r.btnLabel }}</button></sc-if>
+<sc-if value="{{ r.unlocked }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ r.redeem }}" style="height:48px;border:none;border-radius:8px;font:600 15px Geist,sans-serif;width:100%;background:#2B5748;color:#F5F7F8;cursor:pointer;transition:background .16s ease,transform .12s ease" style-hover="background:#234739" style-active="background:#1C3A2E;transform:scale(.985)" style-focus="outline:2px solid #2B5748;outline-offset:2px">{{ r.btnLabel }}</button></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:7px">
+<sc-for list="{{ actFilters }}" as="f" hint-placeholder-count="3">
+<button type="button" onClick="{{ f.select }}" style="{{ f.style }}">{{ f.label }}</button>
+</sc-for>
+</div>
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">{{ g.month }}</span>
+<span style="font:500 12.5px/1 Geist,sans-serif;color:#4E5346;font-variant-numeric:tabular-nums">{{ g.net }}</span>
+</div>
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<sc-for list="{{ g.rows }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #EDF0F2;min-height:48px;transition:background .16s ease" style-hover="background:#FAFBFC">
+<span style="width:34px;height:34px;border-radius:8px;background:#F5F7F8;border:1px solid #E1E6E8;flex:none;display:flex;align-items:center;justify-content:center;font:500 12px 'Geist Mono',monospace;color:#4E5346">{{ a.initials }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font:500 14.5px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span>
+<span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">{{ a.meta }}</span>
+</div>
+<span style="font:600 15px/1 Geist,sans-serif;font-variant-numeric:tabular-nums;color:{{ a.color }};white-space:nowrap">{{ a.amount }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ activityEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px dashed #CBD3D6;border-radius:12px;padding:30px 18px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center">
+<span style="font:600 15.5px/1.3 Geist,sans-serif">Nothing here yet</span>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#6E7679;max-width:28ch">No redemptions in this period. Earned points appear under All.</span>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+
+<div style="position:absolute;bottom:0;left:0;right:0;z-index:3;border-top:1px solid #E1E6E8;padding:6px 8px 10px;display:flex;gap:2px;{{ chromeGlass }}">
+<button type="button" onClick="{{ goHome }}" style="{{ mHome }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 9.5L10 4l6.5 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-4V17H4.5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Home</span></button>
+<button type="button" onClick="{{ goStores }}" style="{{ mStores }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 8.5h12V16H4zM4 8.5L5.6 4.5h8.8L16 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Shops</span></button>
+<button type="button" onClick="{{ goCode }}" style="{{ mCode }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 4h4v4H4zM12 4h4v4h-4zM4 12h4v4H4zM12 12h4v4h-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">My code</span></button>
+<button type="button" onClick="{{ goRewards }}" style="{{ mRewards }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 9h12v7H4zM4 9l1.6-3.5h8.8L16 9M10 5.5V16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Rewards</span></button>
+<button type="button" onClick="{{ goActivity }}" style="{{ mActivity }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M4 10h8M4 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Activity</span></button>
+</div>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:16px;right:16px;bottom:84px;background:#1C1F16;color:#F5F7F8;border-radius:10px;padding:13px 15px;display:flex;align-items:center;gap:10px;animation:toastIn .18s ease-out;box-shadow:0 8px 24px -6px rgba(28,31,22,.3)">
+<svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true" style="flex:none"><path d="M4 9.4l3.5 3.4L14 5.8" stroke="#FFF78D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<span style="flex:1;font:500 13.5px/1.35 Geist,sans-serif">{{ toast }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:6;background:rgba(28,31,22,.34);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fadeIn .16s ease-out;display:flex;flex-direction:column;justify-content:flex-end">
+<div onClick="{{ closeSheet }}" style="flex:1"></div>
+<div style="background:rgba(255,255,255,.86);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);border-top:1px solid rgba(255,255,255,.7);border-radius:20px 20px 0 0;padding:20px 16px 22px;box-shadow:0 -8px 24px -6px rgba(28,31,22,.2);animation:sheetUp .2s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;gap:16px">
+<span style="width:36px;height:4px;border-radius:999px;background:#E1E6E8;align-self:center"></span>
+<sc-if value="{{ sheetIdle }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 21px/1.25 Geist,sans-serif;letter-spacing:-.015em">Redeem {{ sheetRewardName }}?</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Points come off straight away and this cannot be undone. Show the confirmation to staff at the counter.</span>
+</div>
+<div style="background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;justify-content:space-between;font:400 14px/1 Geist,sans-serif;color:#4E5346"><span>Balance now</span><span style="font-weight:500;color:#1C1F16;font-variant-numeric:tabular-nums">{{ pointsDisplay }} pts</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;font:400 14px/1 Geist,sans-serif;color:#4E5346"><span>This reward</span><span style="font-weight:500;color:#96271A;font-variant-numeric:tabular-nums">{{ sheetCost }}</span></div>
+<div style="height:1px;background:#E1E6E8"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;font:500 15px/1 Geist,sans-serif"><span>Balance after</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{ pointsAfter }} pts</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<button type="button" onClick="{{ confirmRedeem }}" style="height:48px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#234739" style-active="background:#1C3A2E" style-focus="outline:2px solid #2B5748;outline-offset:2px">Confirm redemption</button>
+<button type="button" onClick="{{ closeSheet }}" style="height:48px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;color:#1C1F16;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#F5F7F8" style-focus="outline:2px solid #2B5748;outline-offset:2px">Keep my points</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ sheetLoading }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;padding:26px 0 34px">
+<span style="width:28px;height:28px;border-radius:50%;border:2.5px solid #E1E6E8;border-top-color:#2B5748;animation:spin .7s linear infinite;display:block"></span>
+<span style="font:500 15px/1 Geist,sans-serif;color:#4E5346">Redeeming…</span>
+</div>
+</sc-if>
+<sc-if value="{{ sheetDone }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:14px 0 8px;text-align:center">
+<span style="width:52px;height:52px;border-radius:50%;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:600 19px/1.25 Geist,sans-serif">Redeemed</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346">Show code <strong style="font:500 14.5px 'Geist Mono',monospace;color:#1C1F16">RC-4821</strong> to staff. Valid 10 minutes.</span>
+</div>
+<button type="button" onClick="{{ closeSheet }}" style="width:100%;height:48px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;margin-top:4px" style-hover="background:#234739" style-focus="outline:2px solid #2B5748;outline-offset:2px">Done</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Desktop · 1280 · same state, same tokens</span>
+<div style="width:1280px;height:820px;box-sizing:border-box;border:1px solid #C9D1D4;border-radius:14px;background:#F5F7F8;overflow:hidden;display:flex;position:relative">
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:5;background:rgba(28,31,22,.34);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fadeIn .16s ease-out;display:flex;align-items:center;justify-content:center">
+<div style="width:460px;background:rgba(255,255,255,.86);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);border:1px solid rgba(255,255,255,.7);border-radius:14px;padding:24px;box-shadow:0 16px 40px -12px rgba(28,31,22,.35);display:flex;flex-direction:column;gap:18px">
+<sc-if value="{{ sheetIdle }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 21px/1.25 Geist,sans-serif;letter-spacing:-.015em">Redeem {{ sheetRewardName }}?</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Points come off straight away and this cannot be undone. Show the confirmation to staff at the counter.</span>
+</div>
+<div style="background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;justify-content:space-between;font:400 14px/1 Geist,sans-serif;color:#4E5346"><span>Balance now</span><span style="font-weight:500;color:#1C1F16;font-variant-numeric:tabular-nums">{{ pointsDisplay }} pts</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;font:400 14px/1 Geist,sans-serif;color:#4E5346"><span>This reward</span><span style="font-weight:500;color:#96271A;font-variant-numeric:tabular-nums">{{ sheetCost }}</span></div>
+<div style="height:1px;background:#E1E6E8"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;font:500 15px/1 Geist,sans-serif"><span>Balance after</span><span style="font-weight:600;font-variant-numeric:tabular-nums">{{ pointsAfter }} pts</span></div>
+</div>
+<div style="display:flex;gap:10px;justify-content:flex-end">
+<button type="button" onClick="{{ closeSheet }}" style="height:44px;padding:0 18px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;color:#1C1F16;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#F5F7F8" style-focus="outline:2px solid #2B5748;outline-offset:2px">Keep my points</button>
+<button type="button" onClick="{{ confirmRedeem }}" style="height:44px;padding:0 18px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#234739" style-active="background:#1C3A2E" style-focus="outline:2px solid #2B5748;outline-offset:2px">Confirm redemption</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ sheetLoading }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;padding:22px 0 26px">
+<span style="width:28px;height:28px;border-radius:50%;border:2.5px solid #E1E6E8;border-top-color:#2B5748;animation:spin .7s linear infinite;display:block"></span>
+<span style="font:500 15px/1 Geist,sans-serif;color:#4E5346">Redeeming…</span>
+</div>
+</sc-if>
+<sc-if value="{{ sheetDone }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:8px 0;text-align:center">
+<span style="width:52px;height:52px;border-radius:50%;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:600 19px/1.25 Geist,sans-serif">Redeemed</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346">Show code <strong style="font:500 14.5px 'Geist Mono',monospace;color:#1C1F16">RC-4821</strong> to staff. Valid 10 minutes.</span>
+</div>
+<button type="button" onClick="{{ closeSheet }}" style="height:44px;padding:0 22px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;margin-top:4px" style-hover="background:#234739" style-focus="outline:2px solid #2B5748;outline-offset:2px">Done</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<div style="width:232px;box-sizing:border-box;flex:none;border-right:1px solid #E1E6E8;background:#fff;padding:20px 14px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:center;gap:9px;padding:0 6px">
+<span style="width:22px;height:22px;border-radius:6px;background:#2B5748;display:block"></span>
+<span style="font:600 15px/1 Geist,sans-serif;letter-spacing:-.01em">LoyaltyLabs</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<button type="button" onClick="{{ goHome }}" style="{{ rHome }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M3.5 9.5L10 4l6.5 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-4V17H4.5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Home</span></button>
+<button type="button" onClick="{{ goStores }}" style="{{ rStores }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M4 8.5h12V16H4zM4 8.5L5.6 4.5h8.8L16 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Shops</span></button>
+<button type="button" onClick="{{ goCode }}" style="{{ rCode }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M4 4h4v4H4zM12 4h4v4h-4zM4 12h4v4H4zM12 12h4v4h-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">My code</span></button>
+<button type="button" onClick="{{ goRewards }}" style="{{ rRewards }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M4 9h12v7H4zM4 9l1.6-3.5h8.8L16 9M10 5.5V16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Rewards</span></button>
+<button type="button" onClick="{{ goActivity }}" style="{{ rActivity }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M4 6h12M4 10h8M4 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Activity</span></button>
+</div>
+<div style="margin-top:auto;background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:4px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Balance</span>
+<span style="font:600 21px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ pointsDisplay }} pts</span>
+</div>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+<div style="position:absolute;top:0;left:0;right:0;z-index:3;padding:18px 24px;border-bottom:1px solid #E1E6E8;display:flex;align-items:center;justify-content:space-between;gap:16px;{{ chromeGlass }}">
+<div style="display:flex;flex-direction:column;gap:2px">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">{{ screenKicker }}</span>
+<span style="font:600 22px/1.2 Geist,sans-serif;letter-spacing:-.018em">{{ screenTitle }}</span>
+</div>
+<div style="display:flex;gap:10px">
+<button type="button" onClick="{{ goCode }}" style="height:40px;padding:0 16px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#234739" style-active="background:#1C3A2E" style-focus="outline:2px solid #2B5748;outline-offset:2px">Show my code</button>
+<button type="button" onClick="{{ goStores }}" style="height:40px;padding:0 16px;border:1px solid #CBDAD4;border-radius:8px;background:#fff;color:#234739;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#E4EDEA" style-focus="outline:2px solid #2B5748;outline-offset:2px">Browse shops</button>
+</div>
+</div>
+
+<div style="flex:1;overflow-y:auto;padding:104px 24px 24px;display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-content:start">
+
+<div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+<div style="background:#2B5748;border-radius:12px;padding:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,247,248,.65)">Total balance</span>
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font:600 46px/1 Geist,sans-serif;letter-spacing:-.03em;color:#F5F7F8;font-variant-numeric:tabular-nums">{{ pointsDisplay }}</span><span style="font:500 16px/1 Geist,sans-serif;color:rgba(245,247,248,.72)">pts</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
+<span style="display:flex;align-items:center;gap:7px;font:500 13.5px/1 Geist,sans-serif;color:#F5F7F8;font-variant-numeric:tabular-nums"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 11.5V2.5M7 2.5L3 6.5M7 2.5l4 4" stroke="#FFF78D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>+240 this month</span>
+<span style="font:500 13px/1 Geist,sans-serif;color:rgba(245,247,248,.72);font-variant-numeric:tabular-nums">{{ cashValue }} value</span>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 16px/1.25 Geist,sans-serif">Rye &amp; Co. Bakery</span><span style="font:400 13px/1.3 Geist,sans-serif;color:#6E7679">{{ stampsLeftLabel }}</span></div>
+<span style="font:500 12px/1 'Geist Mono',monospace;padding:6px 9px;border-radius:999px;background:#EBE3A7;color:#6B6320">{{ stampProgressLabel }}</span>
+</div>
+<div style="display:flex;gap:8px">
+<sc-for list="{{ stampSlots }}" as="s" hint-placeholder-count="8">
+<span style="flex:1;height:30px;border-radius:8px;background:{{ s.bg }};border:1px {{ s.borderStyle }} {{ s.border }}"></span>
+</sc-for>
+</div>
+<button type="button" onClick="{{ addStamp }}" style="height:40px;align-self:flex-start;padding:0 16px;border:1px solid #CBDAD4;border-radius:8px;background:#fff;color:#234739;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#E4EDEA" style-active="background:#DCE7E3" style-focus="outline:2px solid #2B5748;outline-offset:2px">Simulate a scan</button>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<div style="padding:16px 18px 12px;display:flex;align-items:center;justify-content:space-between"><span style="font:600 15px/1 Geist,sans-serif">Recent activity</span><button type="button" onClick="{{ goActivity }}" style="height:32px;padding:0 8px;border:none;border-radius:6px;background:transparent;color:#2B5748;font:600 13px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease" style-hover="background:#E4EDEA" style-focus="outline:2px solid #2B5748;outline-offset:2px">View all</button></div>
+<sc-for list="{{ recent }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:14px;padding:10px 18px;border-top:1px solid #EDF0F2;min-height:40px;transition:background .16s ease" style-hover="background:#FAFBFC">
+<span style="width:30px;height:30px;border-radius:7px;background:#F5F7F8;border:1px solid #E1E6E8;flex:none;display:flex;align-items:center;justify-content:center;font:500 11.5px 'Geist Mono',monospace;color:#4E5346">{{ a.initials }}</span>
+<span style="flex:1;min-width:0;font:500 14px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span>
+<span style="font:400 12.5px/1 'Geist Mono',monospace;color:#6E7679;white-space:nowrap">{{ a.meta }}</span>
+<span style="font:600 14.5px/1 Geist,sans-serif;font-variant-numeric:tabular-nums;color:{{ a.color }};white-space:nowrap;width:64px;text-align:right">{{ a.amount }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 15px/1 Geist,sans-serif">Rewards</span><span style="font:500 12px/1 'Geist Mono',monospace;padding:5px 9px;border-radius:999px;background:#EBE3A7;color:#6B6320">{{ readyCount }} ready</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ rewards }}" as="r" hint-placeholder-count="4">
+<div style="border:1px solid #E7ECEE;border-radius:10px;padding:13px;display:flex;align-items:center;gap:12px;transition:border-color .16s ease,box-shadow .16s ease" style-hover="border-color:#CBD3D6;box-shadow:0 4px 12px -8px rgba(28,31,22,.18)">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 14.5px/1.25 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+<span style="font:400 12.5px/1.3 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">{{ r.meta }}</span>
+</div>
+<sc-if value="{{ r.locked }}" hint-placeholder-val="{{ false }}"><button type="button" disabled="true" style="height:38px;padding:0 14px;border:none;border-radius:8px;font:600 13.5px Geist,sans-serif;flex:none;white-space:nowrap;background:#EDF0F2;color:#9AA1A4;cursor:not-allowed">{{ r.btnLabel }}</button></sc-if>
+<sc-if value="{{ r.unlocked }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ r.redeem }}" style="height:38px;padding:0 14px;border:none;border-radius:8px;font:600 13.5px Geist,sans-serif;flex:none;white-space:nowrap;background:#2B5748;color:#F5F7F8;cursor:pointer;transition:background .16s ease,transform .12s ease" style-hover="background:#234739" style-active="background:#1C3A2E;transform:scale(.985)" style-focus="outline:2px solid #2B5748;outline-offset:2px">{{ r.btnLabel }}</button></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:18px;display:flex;flex-direction:column;gap:12px;align-items:center">
+<span style="align-self:flex-start;font:600 15px/1 Geist,sans-serif">Your code</span>
+<div style="width:170px;height:170px;border-radius:12px;background:#F5F7F8;border:1px solid #E1E6E8;position:relative;display:flex;align-items:center;justify-content:center;background-image:repeating-linear-gradient(90deg,#DDE3E6 0 6px,transparent 6px 12px),repeating-linear-gradient(0deg,#DDE3E6 0 6px,transparent 6px 12px);background-size:12px 12px">
+<span style="position:absolute;top:13px;left:13px;width:32px;height:32px;border:6px solid #1C1F16;border-radius:4px"></span>
+<span style="position:absolute;top:13px;right:13px;width:32px;height:32px;border:6px solid #1C1F16;border-radius:4px"></span>
+<span style="position:absolute;bottom:13px;left:13px;width:32px;height:32px;border:6px solid #1C1F16;border-radius:4px"></span>
+<span style="font:500 10.5px/1 'Geist Mono',monospace;color:#4E5346;background:#F5F7F8;padding:5px 7px;border-radius:4px;position:relative">QR placeholder</span>
+</div>
+<span style="font:500 14px/1 'Geist Mono',monospace;letter-spacing:.14em;background:#EBE3A7;padding:8px 12px;border-radius:8px">AM-4821-K9</span>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<div style="border:1px solid #E1E6E8;border-radius:12px;background:#fff;padding:22px;display:flex;flex-direction:column;gap:12px;max-width:900px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">How the two views relate</span>
+<div style="display:flex;flex-direction:column;gap:7px;font:400 14px/1.55 Geist,sans-serif;color:#4E5346">
+<span><strong style="font-weight:600;color:#1C1F16">Glass is chrome only.</strong> App bar, bottom nav, desktop top bar, sheet and dialog are translucent with content scrolling behind them; every surface holding money — balance, rewards, activity rows — stays opaque. When a sheet or dialog opens, the chrome drops to an opaque background so no two blur layers compound.</span>
+<span><strong style="font-weight:600;color:#1C1F16">Same destinations, same order.</strong> Bottom nav at 390 becomes the left rail at 1280 — five items, identical labels and icons. The rail adds a persistent balance block because the width is free.</span>
+<span><strong style="font-weight:600;color:#1C1F16">Width buys density, not size.</strong> Type scale and colour roles are identical. Activity rows go 48px → 40px and gain a separate timestamp column; rewards move from stacked cards to compact rows; the balance card lays out horizontally instead of stacking.</span>
+<span><strong style="font-weight:600;color:#1C1F16">One state.</strong> Both frames read the same store subscriptions, stamp count and points, so redeeming in the phone updates the desktop rail live. Confirmation is a bottom sheet on mobile and a centred 460px dialog over a full-frame scrim on desktop — both driven by the same state, so either surface can complete the redemption and both frames update.</span>
+</div>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1760,&quot;height&quot;:1100},&quot;stampGoal&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:8,&quot;min&quot;:4,&quot;max&quot;:12,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Behaviour&quot;},&quot;startingPoints&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1240,&quot;min&quot;:0,&quot;max&quot;:5000,&quot;step&quot;:10,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Behaviour&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'home', points: null, stamps: 5,
+    subs: { rye: true, glen: true, harbour: false, marsh: false },
+    filter: 'All', actFilter: 'All',
+    sheet: null, sheetReward: null, toast: null
+  };
+
+  go(tab) { return () => this.setState({ tab: tab, toast: null }); }
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+
+  toggleSub(id, name) {
+    return () => {
+      const on = !this.state.subs[id];
+      this.setState({ subs: Object.assign({}, this.state.subs, { [id]: on }) });
+      this.flash(on ? 'Subscribed to ' + name : 'Unsubscribed from ' + name);
+    };
+  }
+
+  pts() {
+    return this.state.points === null ? (this.props.startingPoints ?? 1240) : this.state.points;
+  }
+
+  storeCard(id, name, opts) {
+    const o = opts || {};
+    const subscribed = !!this.state.subs[id];
+    const initials = name.split(/\s+/).filter(w => /[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    const noImage = !!o.noImage;
+    return {
+      id, name, subscribed, notSubscribed: !subscribed,
+      btnLabel: subscribed ? 'Subscribed' : 'Subscribe',
+      imgBg: noImage ? '#EBE3A7' : '#DCE7E3',
+      imgPattern: noImage ? 'none' : 'repeating-linear-gradient(135deg,#CBDAD4 0 6px,transparent 6px 12px)',
+      imgLabel: noImage ? initials : 'store image',
+      imgLabelStyle: noImage
+        ? 'font:600 30px/1 Geist,sans-serif;letter-spacing:-.02em;color:#6B6320'
+        : "font:500 10.5px/1 'Geist Mono',monospace;color:#4E6B60;background:rgba(255,255,255,.9);padding:4px 6px;border-radius:4px",
+      toggle: this.toggleSub(id, name)
+    };
+  }
+
+  renderVals() {
+    const st = this.state;
+    const goal = this.props.stampGoal ?? 8;
+    const points = this.pts();
+    const stamps = Math.min(st.stamps, goal);
+    const slots = [];
+    for (let i = 0; i < goal; i++) {
+      const f = i < stamps;
+      slots.push({ bg: f ? '#FFF78D' : '#F5F7F8', border: f ? '#E6DE6A' : '#CBD3D6', borderStyle: f ? 'solid' : 'dashed' });
+    }
+
+    const titles = {
+      home: ['Good afternoon, Amara', 'Overview'],
+      stores: ['Shops', 'Browse'],
+      code: ['My code', 'Collect'],
+      rewards: ['Rewards', 'Redeem'],
+      activity: ['Activity', 'History']
+    };
+
+    const rewardDefs = [
+      { id: 'r1', name: 'Free flat white', cost: 500, shop: 'Rye & Co.' },
+      { id: 'r2', name: 'Free almond pastry', cost: 300, shop: 'Rye & Co.' },
+      { id: 'r3', name: '£5 off your basket', cost: 1000, shop: 'Green Lane Deli' },
+      { id: 'r4', name: 'Canvas tote bag', cost: 2500, shop: 'Green Lane Deli' }
+    ];
+    const rewards = rewardDefs.map(r => {
+      const locked = points < r.cost;
+      const pill = locked
+        ? "font:500 12px/1 'Geist Mono',monospace;padding:6px 9px;border-radius:999px;background:#EDF0F2;color:#6E7679;white-space:nowrap"
+        : "font:500 12px/1 'Geist Mono',monospace;padding:6px 9px;border-radius:999px;background:#EBE3A7;color:#6B6320;white-space:nowrap";
+      const btnBase = 'height:48px;border-radius:8px;font:600 15px Geist,sans-serif;width:100%;';
+      const btnDeskBase = 'height:38px;padding:0 14px;border-radius:8px;font:600 13.5px Geist,sans-serif;flex:none;white-space:nowrap;';
+      const skin = locked
+        ? 'border:none;background:#EDF0F2;color:#9AA1A4;cursor:not-allowed;'
+        : 'border:none;background:#2B5748;color:#F5F7F8;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;';
+      return {
+        name: r.name,
+        meta: r.cost.toLocaleString('en-GB') + ' pts · ' + r.shop,
+        locked, unlocked: !locked,
+        pillStyle: pill,
+        pillLabel: locked ? 'Locked' : 'Ready',
+        progress: Math.min(100, Math.round((points / r.cost) * 100)) + '%',
+        shortBy: (r.cost - points).toLocaleString('en-GB') + ' pts to go',
+        btnLabel: locked ? 'Not enough points' : 'Redeem — ' + r.cost.toLocaleString('en-GB') + ' pts',
+        btnStyle: btnBase + skin,
+        btnDeskStyle: btnDeskBase + skin,
+        btnHover: locked ? 'background:#EDF0F2' : 'background:#234739',
+        redeem: locked ? () => {} : () => this.setState({ sheet: 'idle', sheetReward: r })
+      };
+    });
+    const readyCount = rewards.filter(r => !r.locked).length;
+
+    const allRows = [
+      { initials: 'RC', title: 'Rye & Co. Bakery', meta: '22 Aug · 14:08', amount: '+40', color: '#245C2E', kind: 'earn', month: 'August 2026' },
+      { initials: 'FF', title: 'Free flat white redeemed', meta: '19 Aug · 09:21', amount: '−500', color: '#96271A', kind: 'redeem', month: 'August 2026' },
+      { initials: 'GL', title: 'Green Lane Deli', meta: '17 Aug · 12:44', amount: '+85', color: '#245C2E', kind: 'earn', month: 'August 2026' },
+      { initials: 'RC', title: 'Rye & Co. Bakery', meta: '14 Aug · 08:03', amount: '+40', color: '#245C2E', kind: 'earn', month: 'August 2026' },
+      { initials: 'MM', title: 'Marsh & Mill', meta: '29 Jul · 17:52', amount: '+120', color: '#245C2E', kind: 'earn', month: 'July 2026' },
+      { initials: 'AP', title: 'Almond pastry redeemed', meta: '21 Jul · 10:11', amount: '−300', color: '#96271A', kind: 'redeem', month: 'July 2026' }
+    ];
+    const af = st.actFilter;
+    const filteredRows = allRows.filter(r => af === 'All' || (af === 'Earned' ? r.kind === 'earn' : r.kind === 'redeem'));
+    const months = [];
+    filteredRows.forEach(r => { if (months.indexOf(r.month) < 0) months.push(r.month); });
+    const groups = months.map(m => {
+      const rows = filteredRows.filter(r => r.month === m);
+      const net = rows.reduce((a, r) => a + parseInt(r.amount.replace('−', '-').replace('+', ''), 10), 0);
+      return { month: m, rows, net: (net > 0 ? '+' : '') + net.toLocaleString('en-GB') + ' pts' };
+    });
+
+    const chip = (label, active, on) => ({
+      label,
+      select: on,
+      style: 'height:36px;padding:0 13px;border-radius:999px;font:500 13px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;' +
+        (active ? 'border:1px solid #2B5748;background:#E4EDEA;color:#234739;' : 'border:1px solid #CBD3D6;background:#fff;color:#4E5346;')
+    });
+
+    const storeList = [
+      this.storeCard('rye', 'Rye & Co. Bakery'),
+      this.storeCard('glen', 'Green Lane Deli'),
+      this.storeCard('harbour', 'Harbour Press', { noImage: true }),
+      this.storeCard('marsh', 'Marsh & Mill')
+    ];
+    const shownStores = st.filter === 'Subscribed' ? storeList.filter(s => s.subscribed)
+      : st.filter === 'New' ? storeList.filter(s => !s.subscribed) : storeList;
+
+    const navStyle = (active, mobile) => mobile
+      ? 'flex:1;min-width:0;height:56px;border:none;border-radius:10px;background:' + (active ? '#E4EDEA' : 'transparent') +
+        ';color:' + (active ? '#234739' : '#6E7679') + ';cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;'
+      : 'height:42px;border:none;border-radius:8px;background:' + (active ? '#E4EDEA' : 'transparent') +
+        ';color:' + (active ? '#234739' : '#4E5346') + ';cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;display:flex;align-items:center;gap:10px;padding:0 12px;text-align:left;';
+
+    const sr = st.sheetReward;
+    return {
+      screenTitle: titles[st.tab][0], screenKicker: titles[st.tab][1],
+      isHome: st.tab === 'home', isStores: st.tab === 'stores', isCode: st.tab === 'code',
+      isRewards: st.tab === 'rewards', isActivity: st.tab === 'activity',
+      pointsDisplay: points.toLocaleString('en-GB'),
+      pointsAfter: sr ? Math.max(0, points - sr.cost).toLocaleString('en-GB') : '0',
+      cashValue: '≈ £' + (points * 0.004).toFixed(2),
+      stampSlots: slots,
+      stampProgressLabel: stamps + ' / ' + goal,
+      stampsLeftLabel: stamps >= goal ? 'Reward ready to claim' : (goal - stamps) + ' more for a free coffee',
+      recent: allRows.slice(0, 3),
+      groups, activityEmpty: groups.length === 0,
+      rewards, readyCount, hasReady: readyCount > 0,
+      stores: shownStores,
+      filters: [
+        chip('All', st.filter === 'All', () => this.setState({ filter: 'All' })),
+        chip('Subscribed', st.filter === 'Subscribed', () => this.setState({ filter: 'Subscribed' })),
+        chip('New', st.filter === 'New', () => this.setState({ filter: 'New' }))
+      ],
+      actFilters: [
+        chip('All', af === 'All', () => this.setState({ actFilter: 'All' })),
+        chip('Earned', af === 'Earned', () => this.setState({ actFilter: 'Earned' })),
+        chip('Redeemed', af === 'Redeemed', () => this.setState({ actFilter: 'Redeemed' }))
+      ],
+      mHome: navStyle(st.tab === 'home', true), mStores: navStyle(st.tab === 'stores', true),
+      mCode: navStyle(st.tab === 'code', true), mRewards: navStyle(st.tab === 'rewards', true),
+      mActivity: navStyle(st.tab === 'activity', true),
+      rHome: navStyle(st.tab === 'home', false), rStores: navStyle(st.tab === 'stores', false),
+      rCode: navStyle(st.tab === 'code', false), rRewards: navStyle(st.tab === 'rewards', false),
+      rActivity: navStyle(st.tab === 'activity', false),
+      goHome: this.go('home'),
+      goRewards: this.go('rewards'), goCode: this.go('code'), goStores: this.go('stores'), goActivity: this.go('activity'),
+      addStamp: () => {
+        const next = Math.min(this.state.stamps + 1, goal);
+        this.setState({ stamps: next, points: this.pts() + 40 });
+        this.flash(next >= goal ? 'Stamp card complete — reward unlocked' : 'Stamp added · ' + next + ' of ' + goal);
+      },
+      chromeGlass: st.sheet !== null
+        ? 'background:#F5F7F8'
+        : 'background:rgba(245,247,248,.72);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)',
+      sheetOpen: st.sheet !== null,
+      sheetIdle: st.sheet === 'idle',
+      sheetLoading: st.sheet === 'loading',
+      sheetDone: st.sheet === 'done',
+      sheetRewardName: sr ? sr.name.toLowerCase() : '',
+      sheetCost: sr ? '−' + sr.cost.toLocaleString('en-GB') + ' pts' : '',
+      closeSheet: () => this.setState({ sheet: null, sheetReward: null }),
+      confirmRedeem: () => {
+        this.setState({ sheet: 'loading' });
+        setTimeout(() => this.setState(s => ({
+          sheet: 'done',
+          points: Math.max(0, this.pts() - (s.sheetReward ? s.sheetReward.cost : 0))
+        })), 1100);
+      },
+      toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

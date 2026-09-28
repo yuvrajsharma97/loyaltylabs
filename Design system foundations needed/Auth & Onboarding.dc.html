@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,250,0,0&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F7F8;color:#1C1F16;font-family:Geist,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2B5748;text-decoration:none}
+a:hover{color:#234739;text-decoration:underline}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes popIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+input,button,textarea{font-family:Geist,sans-serif}
+.msy{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;font-size:20px;line-height:1;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 250,'GRAD' 0,'opsz' 24;user-select:none}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+input:focus-visible,button:focus-visible{outline:2px solid #2B5748;outline-offset:2px}
+.scr{animation:popIn .26s cubic-bezier(.2,.7,.3,1) both}
+.stack{overflow-y:auto;scrollbar-width:thin}
+@supports not (backdrop-filter: blur(1px)){.glass{background:#F5F7F8 !important}}
+</style>
+</helmet>
+
+<div style="max-width:1240px;margin:0 auto;padding:48px 28px 96px;display:flex;flex-direction:column;gap:28px">
+
+<header style="display:flex;flex-direction:column;gap:14px;padding-bottom:24px;border-bottom:1px solid #E1E6E8">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:22px;height:22px;border-radius:6px;background:#2B5748;display:block"></span>
+<span style="font:500 12px/1 'Geist Mono',ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#6E7679">LoyaltyLabs · auth &amp; onboarding</span>
+</div>
+<h1 style="margin:0;font:600 38px/1.06 Geist,sans-serif;letter-spacing:-.028em;max-width:22ch">Getting in, and getting set up.</h1>
+<p style="margin:0;max-width:74ch;font:400 16px/1.6 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Seventeen screens covering the four auth routes — including every state of the verify-email link — and both onboarding flows from <code style="font:400 13.5px 'Geist Mono',monospace;background:#EBE3A7;padding:1px 5px;border-radius:4px">client/src</code>, on the existing tokens. Everything is live — type in the fields, pick interests, join shops, step through. Prices are in pounds.</p>
+</header>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ flows }}" as="f" hint-placeholder-count="3">
+<sc-if value="{{ f.on }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ f.go }}" style="height:38px;padding:0 15px;border:1px solid #2B5748;border-radius:9px;background:#2B5748;color:#F5F7F8;font:600 13.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease" style-hover="background:#234739">{{ f.label }}</button>
+</sc-if>
+<sc-if value="{{ f.off }}">
+<button onClick="{{ f.go }}" style="height:38px;padding:0 15px;border:1px solid #CBD3D6;border-radius:9px;background:#FFFFFF;color:#4E5346;font:500 13.5px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease,color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">{{ f.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+<div style="display:flex;gap:6px;padding:4px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:10px">
+<sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+<span style="height:32px;padding:0 13px;display:inline-flex;align-items:center;border-radius:7px;background:#E4EDEA;color:#2B5748;font:600 12.5px 'Geist Mono',monospace">390</span>
+<button onClick="{{ toDesktop }}" style="height:32px;padding:0 13px;border:0;border-radius:7px;background:transparent;color:#6E7679;font:500 12.5px 'Geist Mono',monospace;cursor:pointer" style-hover="color:#2B5748">1024</button>
+</sc-if>
+<sc-if value="{{ isDesktop }}">
+<button onClick="{{ toMobile }}" style="height:32px;padding:0 13px;border:0;border-radius:7px;background:transparent;color:#6E7679;font:500 12.5px 'Geist Mono',monospace;cursor:pointer" style-hover="color:#2B5748">390</button>
+<span style="height:32px;padding:0 13px;display:inline-flex;align-items:center;border-radius:7px;background:#E4EDEA;color:#2B5748;font:600 12.5px 'Geist Mono',monospace">1024</span>
+</sc-if>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="4">
+<sc-if value="{{ s.on }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ s.go }}" style="height:32px;padding:0 12px;border:1px solid #2B5748;border-radius:999px;background:#E4EDEA;color:#2B5748;font:600 12.5px Geist,sans-serif;cursor:pointer">{{ s.label }}</button>
+</sc-if>
+<sc-if value="{{ s.off }}">
+<button onClick="{{ s.go }}" style="height:32px;padding:0 12px;border:1px solid #E1E6E8;border-radius:999px;background:#FFFFFF;color:#6E7679;font:500 12.5px Geist,sans-serif;cursor:pointer;transition:color .15s ease,border-color .15s ease" style-hover="color:#2B5748;border-color:#CBD3D6">{{ s.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+
+<div style="flex:0 0 auto;width:{{ frameW }}px;max-width:100%;height:812px;position:relative;border:1px solid #CBD3D6;border-radius:26px;background:#F5F7F8;overflow:hidden;box-shadow:0 14px 40px -28px rgba(28,31,22,.32),0 1px 2px rgba(28,31,22,.04)">
+
+<div class="glass" style="position:absolute;top:0;left:0;right:0;z-index:5;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:rgba(245,247,248,.72);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-bottom:1px solid #E1E6E8">
+<span style="font:600 13px 'Geist Mono',monospace;color:#1C1F16;font-variant-numeric:tabular-nums">9:41</span>
+<span style="display:flex;align-items:center;gap:9px;font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">{{ crumb }}</span>
+<span style="width:22px;height:11px;border:1px solid #6E7679;border-radius:3px;position:relative;display:block"><span style="position:absolute;inset:1.5px;right:6px;background:#2B5748;border-radius:1px;display:block"></span></span>
+</div>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:64px;left:16px;right:16px;z-index:8;display:flex;align-items:center;gap:11px;padding:13px 14px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 10px 30px -18px rgba(28,31,22,.4);animation:toastIn .2s ease both">
+<span class="msy" style="font-size:20px;color:#A8442C;flex:none">error</span>
+<span style="flex:1;font:400 13.5px/1.45 Geist,sans-serif;color:#1C1F16">{{ toastMsg }}</span>
+<button onClick="{{ dismissToast }}" aria-label="Dismiss notification" style="width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#6E7679;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:background .15s ease" style-hover="background:#EDF0F2"><span class="msy" style="font-size:18px">close</span></button>
+</div>
+</sc-if>
+
+<div class="stack" style="position:absolute;inset:52px 0 0;display:flex;flex-direction:column">
+
+<sc-if value="{{ isSignIn }}" hint-placeholder-val="{{ true }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="width:48px;height:48px;border-radius:13px;background:#EBE3A7;display:flex;align-items:center;justify-content:center"><span class="msy" style="font-size:24px;color:#5A5410;font-variation-settings:'FILL' 1,'wght' 300">local_cafe</span></span>
+<h2 style="margin:9px 0 0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Welcome back</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Sign in to your LoyaltyLabs account to continue earning stamps.</p>
+</div>
+
+<div style="display:flex;gap:5px;padding:4px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:11px">
+<sc-for list="{{ signInTabs }}" as="t" hint-placeholder-count="2">
+<sc-if value="{{ t.on }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ t.go }}" style="flex:1;height:40px;border:0;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14px Geist,sans-serif;cursor:pointer">{{ t.label }}</button>
+</sc-if>
+<sc-if value="{{ t.off }}">
+<button onClick="{{ t.go }}" style="flex:1;height:40px;border:0;border-radius:8px;background:transparent;color:#4E5346;font:500 14px Geist,sans-serif;cursor:pointer;transition:background .15s ease" style-hover="background:#EDF0F2">{{ t.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:15px">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="si-email" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Email address</label>
+<div style="position:relative;display:flex;align-items:center">
+<span class="msy" style="position:absolute;left:13px;color:#6E7679;pointer-events:none">mail</span>
+<input id="si-email" type="email" value="{{ email }}" onChange="{{ setEmail }}" placeholder="name@example.co.uk" style="flex:1;height:50px;padding:0 14px 0 46px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<label for="si-pw" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Password</label>
+<a href="#" style="font:500 13px Geist,sans-serif">Forgot password?</a>
+</div>
+<div style="position:relative;display:flex;align-items:center">
+<span class="msy" style="position:absolute;left:13px;color:#6E7679;pointer-events:none">lock</span>
+<input id="si-pw" type="{{ pwType }}" value="{{ pw }}" onChange="{{ setPw }}" placeholder="Enter your password" style="flex:1;height:50px;padding:0 48px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<button onClick="{{ togglePw }}" aria-label="{{ pwAria }}" style="position:absolute;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#6E7679;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s ease,background .15s ease" style-hover="color:#2B5748;background:#EDF0F2"><span class="msy" style="font-size:19px">{{ pwIcon }}</span></button>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px">
+<sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}">
+<button style="height:52px;display:flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:10px;background:#234739;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:wait">
+<span style="width:15px;height:15px;border:2px solid rgba(245,247,248,.35);border-top-color:#F5F7F8;border-radius:50%;display:block;animation:spin .7s linear infinite"></span>Signing in…</button>
+</sc-if>
+<sc-if value="{{ notBusy }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ submitSignIn }}" style="height:52px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Sign in</button>
+</sc-if>
+
+<sc-if value="{{ isCustomerSignIn }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="flex:1;height:1px;background:#EDF0F2;display:block"></span>
+<span style="font:500 10.5px/1 'Geist Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6E7679">or continue with</span>
+<span style="flex:1;height:1px;background:#EDF0F2;display:block"></span>
+</div>
+<button style="height:50px;display:flex;align-items:center;justify-content:center;gap:11px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:600 15px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease" style-hover="border-color:#2B5748;box-shadow:0 2px 8px -4px rgba(28,31,22,.18)">
+<span title="Google mark placeholder — drop the real asset here" style="width:20px;height:20px;border-radius:4px;background:#EDF0F2;display:flex;align-items:center;justify-content:center;font:600 10px 'Geist Mono',monospace;color:#6E7679">G</span>Sign in with Google</button>
+</sc-if>
+<sc-if value="{{ isOwnerSignIn }}" hint-placeholder-val="{{ false }}">
+<p style="margin:0;font:400 12.5px/1.5 Geist,sans-serif;color:#6E7679">Google sign-in is customer-only — shop accounts use email and password.</p>
+</sc-if>
+
+<p style="margin:0;text-align:center;font:400 14px Geist,sans-serif;color:#4E5346">New to LoyaltyLabs? <a href="#" onClick="{{ goSignUp }}" style="font-weight:600">Create one</a></p>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSignUp }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="width:34px;height:34px;border-radius:9px;background:#2B5748;display:block"></span>
+<sc-if value="{{ isCustomerAcct }}" hint-placeholder-val="{{ true }}">
+<h2 style="margin:8px 0 0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Create your account</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Collect points at the independent shops you already visit.</p>
+</sc-if>
+<sc-if value="{{ isOwnerAcct }}">
+<h2 style="margin:8px 0 0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Register your shop</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Email and password now — shop details, earning rules and your till code come next.</p>
+</sc-if>
+</div>
+
+<div style="display:flex;gap:5px;padding:4px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:11px">
+<sc-for list="{{ acctTabs }}" as="a" hint-placeholder-count="2">
+<sc-if value="{{ a.on }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ a.go }}" style="flex:1;height:40px;border:0;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14px Geist,sans-serif;cursor:pointer">{{ a.label }}</button>
+</sc-if>
+<sc-if value="{{ a.off }}">
+<button onClick="{{ a.go }}" style="flex:1;height:40px;border:0;border-radius:8px;background:transparent;color:#4E5346;font:500 14px Geist,sans-serif;cursor:pointer;transition:background .15s ease" style-hover="background:#EDF0F2">{{ a.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-if value="{{ isCustomerAcct }}">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="su-name" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Full name</label>
+<input id="su-name" value="{{ name }}" onChange="{{ setName }}" placeholder="Alex Whitfield" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="su-email" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Email</label>
+<input id="su-email" type="email" value="{{ email }}" onChange="{{ setEmail }}" placeholder="name@example.co.uk" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="su-pw" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Password</label>
+<div style="position:relative;display:flex;align-items:center">
+<span class="msy" style="position:absolute;left:13px;color:#6E7679;pointer-events:none">lock</span>
+<input id="su-pw" type="{{ pwType }}" value="{{ pw }}" onChange="{{ setPw }}" placeholder="At least 8 characters" style="flex:1;height:50px;padding:0 48px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<button onClick="{{ togglePw }}" aria-label="{{ pwAria }}" style="position:absolute;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#6E7679;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s ease,background .15s ease" style-hover="color:#2B5748;background:#EDF0F2"><span class="msy" style="font-size:19px">{{ pwIcon }}</span></button>
+</div>
+<div style="display:flex;gap:5px;margin-top:2px">
+<sc-for list="{{ pwBars }}" as="b" hint-placeholder-count="3">
+<sc-if value="{{ b.on }}" hint-placeholder-val="{{ false }}">
+<span style="flex:1;height:4px;border-radius:2px;background:#2B5748;display:block"></span>
+</sc-if>
+<sc-if value="{{ b.off }}" hint-placeholder-val="{{ true }}">
+<span style="flex:1;height:4px;border-radius:2px;background:#EDF0F2;display:block"></span>
+</sc-if>
+</sc-for>
+</div>
+<span style="font:400 12.5px/1.4 Geist,sans-serif;color:#6E7679">{{ pwHint }}</span>
+</div>
+<sc-if value="{{ isOwnerAcct }}">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="su-pw2" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Repeat password</label>
+<input id="su-pw2" type="password" value="{{ pw2 }}" onChange="{{ setPw2 }}" placeholder="Re-enter your password" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<sc-if value="{{ pwMismatch }}" hint-placeholder-val="{{ false }}">
+<span style="font:400 12.5px/1.4 Geist,sans-serif;color:#8C3A25">Passwords don't match yet.</span>
+</sc-if>
+</div>
+</sc-if>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<button onClick="{{ submitSignUp }}" style="height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">{{ signUpCta }}</button>
+<p style="margin:0;font:400 12.5px/1.5 Geist,sans-serif;color:#6E7679;text-wrap:pretty">By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Notice</a>. We never see card details — LoyaltyLabs records points, not payments.</p>
+<p style="margin:0;text-align:center;font:400 14px Geist,sans-serif;color:#4E5346">Already have an account? <a href="#" onClick="{{ goSignIn }}" style="font-weight:600">Sign in</a></p>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSent }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:400px;margin:0 auto;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center">
+<span class="msy" style="font-size:56px;color:#2B5748;font-variation-settings:'FILL' 1,'wght' 300">mark_email_read</span>
+<h2 style="margin:0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Check your email</h2>
+<p style="margin:0;font:400 15px/1.55 Geist,sans-serif;color:#4E5346;text-wrap:pretty">We sent a verification link to <strong style="color:#1C1F16;font-weight:600">{{ emailShown }}</strong>. Verify your address to activate your account and QR code.</p>
+<a href="#" onClick="{{ goSignIn }}" style="font-weight:600;font-size:15px">Back to sign in</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVLoad }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:400px;margin:0 auto;display:flex;flex-direction:column;gap:20px;align-items:center;text-align:center">
+<span style="width:40px;height:40px;border:3px solid #E1E6E8;border-top-color:#2B5748;border-radius:50%;display:block;animation:spin .8s linear infinite"></span>
+<h2 style="margin:0;font:600 26px/1.14 Geist,sans-serif;letter-spacing:-.022em">Verifying your email…</h2>
+<p style="margin:0;font:400 14.5px/1.5 Geist,sans-serif;color:#6E7679">This takes a second. Don't close the tab.</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVOk }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:400px;margin:0 auto;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center">
+<span class="msy" style="font-size:56px;color:#2B5748;font-variation-settings:'FILL' 1,'wght' 300">verified</span>
+<h2 style="margin:0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Email verified</h2>
+<p style="margin:0;font:400 15px/1.55 Geist,sans-serif;color:#4E5346">Your account is active. You can sign in now.</p>
+<button onClick="{{ goSignIn }}" style="width:100%;height:52px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Continue to sign in</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVAlready }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:400px;margin:0 auto;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center">
+<span class="msy" style="font-size:56px;color:#2B5748;font-variation-settings:'FILL' 1,'wght' 300">verified</span>
+<h2 style="margin:0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Already verified</h2>
+<p style="margin:0;font:400 15px/1.55 Geist,sans-serif;color:#4E5346">This email address is already verified — you can sign in.</p>
+<button onClick="{{ goSignIn }}" style="width:100%;height:52px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Continue to sign in</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVBad }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:400px;margin:0 auto;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center">
+<span class="msy" style="font-size:56px;color:#A8442C;font-variation-settings:'wght' 300">error</span>
+<h2 style="margin:0;font:600 27px/1.12 Geist,sans-serif;letter-spacing:-.024em">Link expired or invalid</h2>
+<p style="margin:0;font:400 15px/1.55 Geist,sans-serif;color:#4E5346;text-wrap:pretty">This verification link is invalid or has expired. Enter your email and we'll send a new one.</p>
+<sc-if value="{{ resendSent }}" hint-placeholder-val="{{ false }}">
+<div style="width:100%;display:flex;gap:11px;padding:14px 16px;background:#E4EDEA;border-radius:12px;text-align:left">
+<span class="msy" style="font-size:20px;color:#2B5748;flex:none">check_circle</span>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#1C3A2E">If an account exists for that address, a new link is on its way.</span>
+</div>
+</sc-if>
+<sc-if value="{{ resendOpen }}" hint-placeholder-val="{{ true }}">
+<div style="width:100%;display:flex;flex-direction:column;gap:11px;text-align:left">
+<div style="position:relative;display:flex;align-items:center">
+<span class="msy" style="position:absolute;left:13px;color:#6E7679;pointer-events:none">mail</span>
+<input type="email" value="{{ resendEmail }}" onChange="{{ setResendEmail }}" placeholder="your@email.co.uk" style="flex:1;height:50px;padding:0 14px 0 46px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<button onClick="{{ submitResend }}" style="height:52px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Send a new link</button>
+</div>
+</sc-if>
+<a href="#" onClick="{{ goSignIn }}" style="font-weight:600;font-size:14.5px">Back to sign in</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAdminSignIn }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="width:48px;height:48px;border-radius:13px;background:#1C1F16;display:flex;align-items:center;justify-content:center"><span class="msy" style="font-size:24px;color:#F5F7F8;font-variation-settings:'FILL' 1,'wght' 300">shield_person</span></span>
+<h2 style="margin:9px 0 0;font:600 28px/1.12 Geist,sans-serif;letter-spacing:-.024em">Admin sign in</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Restricted access. Authorized administrators only.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:15px">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="ad-email" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Email address</label>
+<div style="position:relative;display:flex;align-items:center">
+<span class="msy" style="position:absolute;left:13px;color:#6E7679;pointer-events:none">mail</span>
+<input id="ad-email" type="email" value="{{ email }}" onChange="{{ setEmail }}" placeholder="admin@example.com" style="flex:1;height:50px;padding:0 14px 0 46px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="ad-pw" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Password</label>
+<div style="position:relative;display:flex;align-items:center">
+<span class="msy" style="position:absolute;left:13px;color:#6E7679;pointer-events:none">lock</span>
+<input id="ad-pw" type="{{ pwType }}" value="{{ pw }}" onChange="{{ setPw }}" placeholder="Enter your password" style="flex:1;height:50px;padding:0 48px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<button onClick="{{ togglePw }}" aria-label="{{ pwAria }}" style="position:absolute;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#6E7679;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s ease,background .15s ease" style-hover="color:#2B5748;background:#EDF0F2"><span class="msy" style="font-size:19px">{{ pwIcon }}</span></button>
+</div>
+</div>
+</div>
+<button style="height:52px;border:0;border-radius:10px;background:#1C1F16;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#2A2E23;box-shadow:0 6px 16px -10px rgba(28,31,22,.7)" style-active="transform:translateY(1px)">Sign in</button>
+<p style="margin:0;font:400 12.5px/1.5 Geist,sans-serif;color:#6E7679;text-wrap:pretty">This route isn't linked from anywhere in the product — it's reachable only by typing the URL. A shop-owner account that signs in here is signed straight back out.</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCustomerStep }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;padding:{{ pad }};gap:22px">
+<div style="width:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+
+<div style="display:flex;gap:10px">
+<sc-for list="{{ custSteps }}" as="st" hint-placeholder-count="3">
+<sc-if value="{{ st.fill }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;gap:7px">
+<span style="height:4px;border-radius:2px;background:#2B5748;display:block"></span>
+<span style="font:500 10.5px/1.2 'Geist Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#2B5748">{{ st.label }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ st.dim }}">
+<div style="flex:1;display:flex;flex-direction:column;gap:7px">
+<span style="height:4px;border-radius:2px;background:#E1E6E8;display:block"></span>
+<span style="font:500 10.5px/1.2 'Geist Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#6E7679">{{ st.label }}</span>
+</div>
+</sc-if>
+</sc-for>
+</div>
+
+<sc-if value="{{ isC1 }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">What do you shop for?</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Pick as many as you like. We'll show you nearby shops that match.</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<sc-for list="{{ interestTiles }}" as="t" hint-placeholder-count="4">
+<sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ t.go }}" style="min-height:104px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:8px;padding:16px;border:1.5px solid #2B5748;border-radius:14px;background:#E4EDEA;cursor:pointer;text-align:left;transition:transform .12s ease" style-active="transform:translateY(1px)">
+<span style="width:26px;height:26px;border-radius:8px;background:#2B5748;display:flex;align-items:center;justify-content:center;color:#F5F7F8;font:600 13px Geist,sans-serif">✓</span>
+<span style="font:600 15px Geist,sans-serif;color:#1C3A2E">{{ t.label }}</span>
+</button>
+</sc-if>
+<sc-if value="{{ t.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ t.go }}" style="min-height:104px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:8px;padding:16px;border:1px solid #E1E6E8;border-radius:14px;background:#FFFFFF;cursor:pointer;text-align:left;transition:border-color .15s ease,box-shadow .15s ease,transform .12s ease" style-hover="border-color:#CBD3D6;box-shadow:0 4px 14px -10px rgba(28,31,22,.24)" style-active="transform:translateY(1px)">
+<span style="width:26px;height:26px;border-radius:8px;border:1px solid #CBD3D6;background:#F5F7F8;display:block"></span>
+<span style="font:600 15px Geist,sans-serif;color:#1C1F16">{{ t.label }}</span>
+</button>
+</sc-if>
+</sc-for>
+</div>
+<div style="display:flex;gap:11px;margin-top:auto">
+<button onClick="{{ custNext }}" style="flex:1;height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#4E5346;font:600 15px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">Skip</button>
+<button onClick="{{ custNext }}" style="flex:1.4;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">{{ c1Cta }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isC2 }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">Shops near you</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Join one and you start collecting on your next visit. {{ joinedNote }}</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ shops }}" as="sh" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:13px;padding:13px 14px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:13px;transition:border-color .15s ease,box-shadow .15s ease" style-hover="border-color:#CBD3D6;box-shadow:0 4px 14px -10px rgba(28,31,22,.2)">
+<span style="width:44px;height:44px;border-radius:11px;background:#EBE3A7;display:flex;align-items:center;justify-content:center;flex:none;font:600 15px Geist,sans-serif;color:#5A5410">{{ sh.initials }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 15px/1.25 Geist,sans-serif;color:#1C1F16">{{ sh.name }}</span>
+<span style="font:400 13px/1.3 Geist,sans-serif;color:#6E7679;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sh.meta }}</span>
+</div>
+<sc-if value="{{ sh.joined }}" hint-placeholder-val="{{ false }}">
+<span style="height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;border-radius:9px;background:#E4EDEA;color:#1C3A2E;font:600 13.5px Geist,sans-serif;flex:none">✓ Joined</span>
+</sc-if>
+<sc-if value="{{ sh.notJoined }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ sh.go }}" style="height:38px;padding:0 17px;border:0;border-radius:9px;background:#2B5748;color:#F5F7F8;font:600 13.5px Geist,sans-serif;cursor:pointer;flex:none;transition:background .15s ease,transform .12s ease" style-hover="background:#234739" style-active="background:#1C3A2E;transform:translateY(1px)">Join</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:11px;margin-top:auto">
+<button onClick="{{ custBack }}" style="width:50px;height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#4E5346;font:500 17px Geist,sans-serif;cursor:pointer;flex:none;transition:border-color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">←</button>
+<button onClick="{{ custNext }}" style="flex:1;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">{{ c2Cta }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isC3 }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">Want a nudge when a reward lands?</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Optional. Your points work with or without this.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:18px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="c-phone" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Mobile number</label>
+<input id="c-phone" type="tel" value="{{ phone }}" onChange="{{ setPhone }}" placeholder="07700 900123" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<div style="height:1px;background:#EDF0F2;display:block"></div>
+<div style="display:flex;align-items:center;gap:14px">
+<div style="flex:1;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 14.5px Geist,sans-serif;color:#1C1F16">Reward-ready alerts</span>
+<span style="font:400 13px/1.4 Geist,sans-serif;color:#6E7679">One message when something's claimable. Never marketing.</span>
+</div>
+<sc-if value="{{ alerts }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ toggleAlerts }}" aria-pressed="true" style="width:50px;height:30px;border:0;border-radius:999px;background:#2B5748;position:relative;cursor:pointer;flex:none;transition:background .2s ease"><span style="position:absolute;top:3px;left:23px;width:24px;height:24px;border-radius:50%;background:#F5F7F8;display:block;transition:left .2s cubic-bezier(.2,.7,.3,1)"></span></button>
+</sc-if>
+<sc-if value="{{ noAlerts }}">
+<button onClick="{{ toggleAlerts }}" aria-pressed="false" style="width:50px;height:30px;border:0;border-radius:999px;background:#CBD3D6;position:relative;cursor:pointer;flex:none;transition:background .2s ease"><span style="position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#FFFFFF;display:block;transition:left .2s cubic-bezier(.2,.7,.3,1)"></span></button>
+</sc-if>
+</div>
+</div>
+<div style="display:flex;gap:11px;margin-top:auto">
+<button onClick="{{ custNext }}" style="flex:1;height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#4E5346;font:600 15px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">Skip</button>
+<button onClick="{{ custNext }}" style="flex:1.4;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Finish</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isC4 }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:{{ pad }}">
+<div style="width:100%;max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+<span style="width:60px;height:60px;border-radius:18px;background:#FFF78D;display:flex;align-items:center;justify-content:center;font:600 26px Geist,sans-serif;color:#5A5410">✓</span>
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 29px/1.1 Geist,sans-serif;letter-spacing:-.026em">You're in, Alex.</h2>
+<p style="margin:0;font:400 15px/1.55 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Show your code at the till and points land automatically. Nothing to carry, nothing to remember.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:18px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Your balance</span>
+<span style="font:600 13px 'Geist Mono',monospace;color:#2B5748;font-variant-numeric:tabular-nums">{{ joinedCount }} shops joined</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:8px">
+<span style="font:600 40px/1 Geist,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0</span>
+<span style="font:500 14px Geist,sans-serif;color:#4E5346">points</span>
+</div>
+<div style="height:1px;background:#EDF0F2;display:block"></div>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#4E5346">Your first visit fills this in. Most shops give a point per £1.</span>
+</div>
+<button style="height:52px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Open my wallet</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStoreStep }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;padding:{{ pad }}">
+<div style="width:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:22px;flex:1">
+
+<div style="display:flex;gap:8px">
+<sc-for list="{{ storeSteps }}" as="st" hint-placeholder-count="4">
+<sc-if value="{{ st.fill }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;gap:7px">
+<span style="height:4px;border-radius:2px;background:#2B5748;display:block"></span>
+<span style="font:500 10px/1.2 'Geist Mono',monospace;letter-spacing:.05em;text-transform:uppercase;color:#2B5748">{{ st.label }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ st.dim }}">
+<div style="flex:1;display:flex;flex-direction:column;gap:7px">
+<span style="height:4px;border-radius:2px;background:#E1E6E8;display:block"></span>
+<span style="font:500 10px/1.2 'Geist Mono',monospace;letter-spacing:.05em;text-transform:uppercase;color:#6E7679">{{ st.label }}</span>
+</div>
+</sc-if>
+</sc-for>
+</div>
+
+<sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">Tell us about your shop</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">This is what customers see when they find you.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:18px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-name" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Shop name</label>
+<input id="s-name" value="{{ storeName }}" onChange="{{ setStoreName }}" placeholder="Ashgrove Coffee" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-addr" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Address</label>
+<input id="s-addr" value="{{ addr }}" onChange="{{ setAddr }}" placeholder="14 Bold Street, Liverpool L1 4DN" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Category</span>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ catChips }}" as="c" hint-placeholder-count="4">
+<sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ c.go }}" style="height:40px;padding:0 15px;border:1.5px solid #2B5748;border-radius:999px;background:#E4EDEA;color:#1C3A2E;font:600 14px Geist,sans-serif;cursor:pointer">{{ c.label }}</button>
+</sc-if>
+<sc-if value="{{ c.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ c.go }}" style="height:40px;padding:0 15px;border:1px solid #CBD3D6;border-radius:999px;background:#FFFFFF;color:#4E5346;font:500 14px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease,color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">{{ c.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+</div>
+</div>
+<button onClick="{{ storeNext }}" style="height:50px;margin-top:auto;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Continue</button>
+</sc-if>
+
+<sc-if value="{{ isS2 }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">How do customers earn?</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">You can change this any time without resetting anyone's balance.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:18px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<div style="display:flex;gap:5px;padding:4px;background:#F5F7F8;border:1px solid #E1E6E8;border-radius:11px">
+<sc-for list="{{ modeTabs }}" as="m" hint-placeholder-count="2">
+<sc-if value="{{ m.on }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ m.go }}" style="flex:1;height:40px;border:0;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 13.5px Geist,sans-serif;cursor:pointer">{{ m.label }}</button>
+</sc-if>
+<sc-if value="{{ m.off }}">
+<button onClick="{{ m.go }}" style="flex:1;height:40px;border:0;border-radius:8px;background:transparent;color:#4E5346;font:500 13.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease" style-hover="background:#EDF0F2">{{ m.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-rate" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">{{ rateLabel }}</label>
+<input id="s-rate" value="{{ rate }}" onChange="{{ setRate }}" inputmode="decimal" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:500 16px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-min" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Minimum spend to earn (£)</label>
+<input id="s-min" value="{{ minSpend }}" onChange="{{ setMinSpend }}" inputmode="decimal" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:500 16px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<span style="font:400 12.5px/1.4 Geist,sans-serif;color:#6E7679">Set 0 to let every purchase earn.</span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;padding:16px 18px;background:#EBE3A7;border-radius:14px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#5A5410">What a customer sees</span>
+<span style="font:600 17px/1.35 Geist,sans-serif;color:#1C1F16;font-variant-numeric:tabular-nums">{{ preview }}</span>
+</div>
+<div style="display:flex;gap:11px;margin-top:auto">
+<button onClick="{{ storeBack }}" style="width:50px;height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#4E5346;font:500 17px Geist,sans-serif;cursor:pointer;flex:none;transition:border-color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">←</button>
+<button onClick="{{ storeNext }}" style="flex:1;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Continue</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isS3 }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">Set your till code</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Staff type this to open the till screen. <strong style="color:#1C1F16;font-weight:600">Without it, nobody can scan a customer</strong> — so this step is required.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;padding:18px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<div style="display:flex;flex-direction:column;gap:9px">
+<label for="s-pin" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">4-digit code</label>
+<input id="s-pin" value="{{ pin }}" onChange="{{ setPin }}" inputmode="numeric" placeholder="––––" style="height:64px;padding:0 14px;border:1px solid #CBD3D6;border-radius:12px;background:#F5F7F8;color:#1C1F16;font:500 30px 'Geist Mono',monospace;letter-spacing:.42em;text-align:center;font-variant-numeric:tabular-nums;transition:border-color .15s ease" style-focus="border-color:#2B5748;background:#FFFFFF">
+<sc-if value="{{ pinShort }}" hint-placeholder-val="{{ false }}">
+<span style="font:400 12.5px/1.4 Geist,sans-serif;color:#8C3A25">Needs to be exactly four digits.</span>
+</sc-if>
+</div>
+<div style="height:1px;background:#EDF0F2;display:block"></div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-pinlabel" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Who is this for?</label>
+<input id="s-pinlabel" value="{{ pinLabel }}" onChange="{{ setPinLabel }}" placeholder="Owner, morning shift…" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<span style="font:400 12.5px/1.4 Geist,sans-serif;color:#6E7679">Add one per shift later — every scan is attributed to a code.</span>
+</div>
+</div>
+<div style="display:flex;gap:11px;margin-top:auto">
+<button onClick="{{ storeBack }}" style="width:50px;height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#4E5346;font:500 17px Geist,sans-serif;cursor:pointer;flex:none;transition:border-color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">←</button>
+<sc-if value="{{ pinValid }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ storeNext }}" style="flex:1;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Continue</button>
+</sc-if>
+<sc-if value="{{ pinInvalid }}" hint-placeholder-val="{{ false }}">
+<button disabled="{{ true }}" style="flex:1;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;opacity:.42;cursor:not-allowed">Continue</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isS4 }}">
+<div style="display:flex;flex-direction:column;gap:9px">
+<h2 style="margin:0;font:600 27px/1.14 Geist,sans-serif;letter-spacing:-.024em">Add your first reward</h2>
+<p style="margin:0;font:400 15px/1.5 Geist,sans-serif;color:#4E5346">Something small and obvious works best. You can add more later.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:18px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-rew" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Reward</label>
+<input id="s-rew" value="{{ rewardTitle }}" onChange="{{ setRewardTitle }}" placeholder="Free filter coffee" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:400 15px Geist,sans-serif;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<label for="s-pts" style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Points required</label>
+<input id="s-pts" value="{{ rewardPts }}" onChange="{{ setRewardPts }}" inputmode="numeric" style="height:50px;padding:0 14px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:500 16px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;transition:border-color .15s ease" style-focus="border-color:#2B5748">
+<span style="font:400 12.5px/1.4 Geist,sans-serif;color:#6E7679">{{ rewardMath }}</span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Preview in their wallet</span>
+<div style="display:flex;align-items:center;gap:14px;padding:15px 16px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<span style="width:48px;height:48px;border-radius:12px;background:#FFF78D;display:flex;align-items:center;justify-content:center;flex:none;font:600 15px 'Geist Mono',monospace;color:#5A5410;font-variant-numeric:tabular-nums">{{ rewardPtsShown }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+<span style="font:600 15.5px/1.25 Geist,sans-serif;color:#1C1F16">{{ rewardTitleShown }}</span>
+<span style="font:400 13px/1.3 Geist,sans-serif;color:#6E7679">{{ storeNameShown }}</span>
+</div>
+<span style="height:36px;padding:0 13px;display:inline-flex;align-items:center;border-radius:9px;background:#EDF0F2;color:#6E7679;font:600 13px Geist,sans-serif;flex:none">Locked</span>
+</div>
+</div>
+<div style="display:flex;gap:11px;margin-top:auto">
+<button onClick="{{ storeNext }}" style="flex:1;height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#4E5346;font:600 15px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease" style-hover="border-color:#2B5748;color:#2B5748">Skip for now</button>
+<button onClick="{{ storeNext }}" style="flex:1.4;height:50px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Finish setup</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isS5 }}">
+<div class="scr" style="flex:1;display:flex;flex-direction:column;padding:{{ pad }}">
+<div style="width:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:20px;flex:1">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="width:56px;height:56px;border-radius:16px;background:#FFF78D;display:flex;align-items:center;justify-content:center;font:600 24px Geist,sans-serif;color:#5A5410">✓</span>
+<h2 style="margin:0;font:600 28px/1.1 Geist,sans-serif;letter-spacing:-.026em">{{ storeNameShown }} is live</h2>
+<p style="margin:0;font:400 15px/1.55 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Your till can scan customers now. Print the code for your counter and you're trading.</p>
+</div>
+<div style="display:flex;flex-direction:column;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(28,31,22,.04)">
+<sc-for list="{{ checklist }}" as="ck" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid #EDF0F2">
+<sc-if value="{{ ck.done }}" hint-placeholder-val="{{ true }}">
+<span style="width:22px;height:22px;border-radius:50%;background:#2B5748;color:#F5F7F8;display:flex;align-items:center;justify-content:center;font:600 11px Geist,sans-serif;flex:none">✓</span>
+<span style="flex:1;font:500 14.5px Geist,sans-serif;color:#1C1F16">{{ ck.label }}</span>
+<span style="font:400 13px 'Geist Mono',monospace;color:#6E7679">{{ ck.value }}</span>
+</sc-if>
+<sc-if value="{{ ck.todo }}" hint-placeholder-val="{{ false }}">
+<span style="width:22px;height:22px;border-radius:50%;border:1.5px solid #CBD3D6;display:block;flex:none"></span>
+<span style="flex:1;font:500 14.5px Geist,sans-serif;color:#6E7679">{{ ck.label }}</span>
+<a href="#" style="font:600 13px Geist,sans-serif">Add</a>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:11px;margin-top:auto">
+<button style="height:52px;border:0;border-radius:10px;background:#2B5748;color:#F5F7F8;font:600 15.5px Geist,sans-serif;cursor:pointer;transition:background .15s ease,transform .12s ease,box-shadow .15s ease" style-hover="background:#234739;box-shadow:0 6px 16px -10px rgba(43,87,72,.7)" style-active="background:#1C3A2E;transform:translateY(1px)">Open my dashboard</button>
+<button style="height:50px;border:1px solid #CBD3D6;border-radius:10px;background:#FFFFFF;color:#1C1F16;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:border-color .15s ease" style-hover="border-color:#2B5748">Print counter card</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+<div style="flex:1 1 300px;min-width:min(100%,280px);display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Changed from the repo</span>
+<div style="display:flex;flex-direction:column;gap:9px;font:400 13.5px/1.5 Geist,sans-serif;color:#4E5346">
+<span><strong style="color:#1C1F16;font-weight:600">Auth is reconciled, not reimagined.</strong> Sign-in keeps the customer / shop-owner toggle, the leading mail and lock icons, the shared show/hide control, and the Google button that only appears for customer accounts. Credential errors surface as the app's top-centre toast, not an inline banner. Admin sign-in is email and password only — no second factor exists in the code, so none is drawn.</span>
+<span><strong style="color:#1C1F16;font-weight:600">Verify-email is the link-landing page.</strong> Its four real states are all here — verifying, verified, already verified, and expired with the resend form. "Check your email" is a separate screen, because that's the sign-up success state.</span>
+<span><strong style="color:#1C1F16;font-weight:600">Phone moved last.</strong> Customer onboarding asked for a number before showing any value. Now it's interests → shops → optional contact, so the ask arrives after the payoff.</span>
+<span><strong style="color:#1C1F16;font-weight:600">Till code is framed as a blocker.</strong> It was a quiet step 3; it now says plainly that nobody can scan without it, and Continue stays disabled until four digits are in.</span>
+<span><strong style="color:#1C1F16;font-weight:600">Named progress.</strong> Anonymous bars became labelled steps, so people know what's left.</span>
+<span><strong style="color:#1C1F16;font-weight:600">Live previews.</strong> Earning rules and the first reward render as the customer will see them, in pounds.</span>
+<span><strong style="color:#1C1F16;font-weight:600">A completion screen for owners.</strong> The repo dropped owners straight onto the dashboard; a short checklist confirms what's set and what's outstanding.</span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:#EBE3A7;border-radius:14px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#5A5410">Responsive rule</span>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#4E5346;text-wrap:pretty">These screens carry no data density to gain from width, so desktop keeps the same single 420–460px column, centred, with larger gutters. Width buys breathing room here, not extra columns — unlike the dashboards.</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:#FFFFFF;border:1px solid #E1E6E8;border-radius:14px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Next up</span>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#4E5346">Customer wallet, store directory, shop rewards, QR screen and account settings — then the till flow, owner settings and the admin tables.</span>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:1100}}">
+const SHOPS = [
+  { id: 's1', name: 'Ashgrove Coffee', meta: 'Café · 0.3 mi · 1 point per £1', initials: 'AC' },
+  { id: 's2', name: 'Pike & Rye Bakery', meta: 'Bakery · 0.5 mi · Stamp card', initials: 'PR' },
+  { id: 's3', name: 'Verdant Florist', meta: 'Florist · 0.7 mi · 2 points per £1', initials: 'VF' },
+  { id: 's4', name: 'Hillier Deli', meta: 'Deli · 0.9 mi · 1 point per £1', initials: 'HD' }
+];
+const INTERESTS = [
+  { id: 'cafe', label: 'Cafés & bakeries' },
+  { id: 'retail', label: 'Shops & retail' },
+  { id: 'services', label: 'Services' },
+  { id: 'other', label: 'Everything else' }
+];
+const CATS = [
+  { id: 'cafe', label: 'Café' },
+  { id: 'retail', label: 'Retail' },
+  { id: 'services', label: 'Services' },
+  { id: 'other', label: 'Other' }
+];
+const FLOWS = [
+  { id: 'auth', label: 'Auth', screens: [['signin', 'Sign in'], ['signup', 'Sign up'], ['sent', 'Check your email'], ['v-load', 'Verify · working'], ['v-ok', 'Verify · done'], ['v-already', 'Verify · already'], ['v-bad', 'Verify · expired'], ['admin', 'Admin sign-in']] },
+  { id: 'cust', label: 'Customer onboarding', screens: [['c1', '1 · Interests'], ['c2', '2 · Shops'], ['c3', '3 · Contact'], ['c4', 'Done']] },
+  { id: 'store', label: 'Shop onboarding', screens: [['s1', '1 · Profile'], ['s2', '2 · Earning'], ['s3', '3 · Till code'], ['s4', '4 · Reward'], ['s5', 'Live']] }
+];
+
+class Component extends DCLogic {
+  state = {
+    flow: 'auth', screen: 'signin', view: 'mobile',
+    email: '', pw: '', pw2: '', name: '', pwShown: false, busy: false, toast: '',
+    signInAs: 'customer', resendEmail: '', resendSent: false,
+    interests: ['cafe'], joined: ['s1'], phone: '', alerts: true, acct: 'customer',
+    storeName: '', addr: '', cat: 'cafe',
+    mode: 'per_currency', rate: '1', minSpend: '0',
+    pin: '', pinLabel: '', rewardTitle: '', rewardPts: '100',
+  };
+
+  go(flow, screen) { this.setState({ flow, screen, busy: false, toast: '' }); }
+
+  renderVals() {
+    const s = this.state;
+    const flowDef = FLOWS.find(f => f.id === s.flow) || FLOWS[0];
+    const money = n => '£' + n.toFixed(2);
+    const rateNum = parseFloat(s.rate) || 0;
+    const ptsNum = parseInt(s.rewardPts, 10) || 0;
+    const perVisit = s.mode === 'per_visit';
+    const spend = 12.4;
+    const preview = perVisit
+      ? 'Any visit over ' + money(parseFloat(s.minSpend) || 0) + ' → ' + Math.round(rateNum) + ' points'
+      : money(spend) + ' spent → ' + Math.floor(spend * rateNum) + ' points';
+    const rewardTitleShown = s.rewardTitle.trim() || 'Free filter coffee';
+    const storeNameShown = s.storeName.trim() || 'Your shop';
+    const pwLen = s.pw.length;
+    const strength = pwLen === 0 ? 0 : pwLen < 8 ? 1 : pwLen < 12 ? 2 : 3;
+    const custIdx = ['c1', 'c2', 'c3'].indexOf(s.screen);
+    const storeIdx = ['s1', 's2', 's3', 's4'].indexOf(s.screen);
+
+    return {
+      frameW: s.view === 'mobile' ? 390 : 1024,
+      pad: s.view === 'mobile' ? '26px 22px 34px' : '48px 64px 56px',
+      isMobile: s.view === 'mobile', isDesktop: s.view === 'desktop',
+      toMobile: () => this.setState({ view: 'mobile' }),
+      toDesktop: () => this.setState({ view: 'desktop' }),
+      crumb: flowDef.label,
+
+      flows: FLOWS.map(f => ({
+        label: f.label, on: f.id === s.flow, off: f.id !== s.flow,
+        go: () => this.go(f.id, f.screens[0][0])
+      })),
+      screens: flowDef.screens.map(([id, label]) => ({
+        label, on: id === s.screen, off: id !== s.screen,
+        go: () => this.go(s.flow, id)
+      })),
+
+      isSignIn: s.screen === 'signin', isSignUp: s.screen === 'signup',
+      isSent: s.screen === 'sent', isAdminSignIn: s.screen === 'admin',
+      isVLoad: s.screen === 'v-load', isVOk: s.screen === 'v-ok',
+      isVAlready: s.screen === 'v-already', isVBad: s.screen === 'v-bad',
+      isC1: s.screen === 'c1', isC2: s.screen === 'c2', isC3: s.screen === 'c3', isC4: s.screen === 'c4',
+      isS1: s.screen === 's1', isS2: s.screen === 's2', isS3: s.screen === 's3', isS4: s.screen === 's4', isS5: s.screen === 's5',
+      isCustomerStep: custIdx >= 0, isStoreStep: storeIdx >= 0,
+
+      email: s.email, pw: s.pw, pw2: s.pw2, name: s.name, phone: s.phone,
+      emailShown: s.email.trim() || 'alex@example.co.uk',
+      setEmail: e => this.setState({ email: e.target.value, toast: '' }),
+      setPw: e => this.setState({ pw: e.target.value, toast: '' }),
+      setPw2: e => this.setState({ pw2: e.target.value }),
+      setName: e => this.setState({ name: e.target.value }),
+      setPhone: e => this.setState({ phone: e.target.value }),
+      pwType: s.pwShown ? 'text' : 'password',
+      pwIcon: s.pwShown ? 'visibility_off' : 'visibility',
+      pwAria: s.pwShown ? 'Hide password' : 'Show password',
+      togglePw: () => this.setState({ pwShown: !s.pwShown }),
+      signInTabs: [['customer', 'Customer'], ['user', 'Store owner']].map(([id, label]) => ({
+        label, on: s.signInAs === id, off: s.signInAs !== id,
+        go: () => this.setState({ signInAs: id, toast: '' })
+      })),
+      isCustomerSignIn: s.signInAs === 'customer', isOwnerSignIn: s.signInAs === 'user',
+      hasToast: s.toast.length > 0, toastMsg: s.toast,
+      dismissToast: () => this.setState({ toast: '' }),
+      resendEmail: s.resendEmail, resendSent: s.resendSent, resendOpen: !s.resendSent,
+      setResendEmail: e => this.setState({ resendEmail: e.target.value }),
+      submitResend: () => this.setState({ resendSent: true }),
+      pwBars: [1, 2, 3].map(i => ({ on: i <= strength, off: i > strength })),
+      pwHint: pwLen === 0 ? 'Eight characters minimum.' : strength === 1 ? 'Too short — eight characters minimum.' : strength === 2 ? 'Fine. Longer is stronger.' : 'Strong.',
+      pwMismatch: s.pw2.length > 0 && s.pw2 !== s.pw,
+      busy: s.busy, notBusy: !s.busy,
+      submitSignIn: () => {
+        this.setState({ busy: true, toast: '' });
+        clearTimeout(this._t);
+        this._t = setTimeout(() => this.setState({ busy: false, toast: 'Invalid email or password' }), 1100);
+      },
+      goSignUp: e => { if (e) e.preventDefault(); this.go('auth', 'signup'); },
+      goSignIn: e => { if (e) e.preventDefault(); this.go('auth', 'signin'); },
+      submitSignUp: () => this.go('auth', 'sent'),
+      acctTabs: [['customer', 'Customer'], ['store', 'Store owner']].map(([id, label]) => ({
+        label, on: s.acct === id, off: s.acct !== id,
+        go: () => this.setState({ acct: id })
+      })),
+      isCustomerAcct: s.acct === 'customer',
+      isOwnerAcct: s.acct === 'store',
+      signUpCta: s.acct === 'store' ? 'Register shop' : 'Create account',
+
+      custSteps: [['Interests', 0], ['Shops', 1], ['Contact', 2]].map(([label, i]) => ({
+        label, fill: i <= custIdx, dim: i > custIdx
+      })),
+      interestTiles: INTERESTS.map(t => ({
+        label: t.label, on: s.interests.includes(t.id), off: !s.interests.includes(t.id),
+        go: () => this.setState({
+          interests: s.interests.includes(t.id) ? s.interests.filter(x => x !== t.id) : s.interests.concat(t.id)
+        })
+      })),
+      c1Cta: s.interests.length > 0 ? 'Show me shops' : 'Continue',
+      shops: SHOPS.map(sh => ({
+        name: sh.name, meta: sh.meta, initials: sh.initials,
+        joined: s.joined.includes(sh.id), notJoined: !s.joined.includes(sh.id),
+        go: () => this.setState({ joined: s.joined.concat(sh.id) })
+      })),
+      joinedNote: s.joined.length === 0 ? '' : s.joined.length === 1 ? 'One joined.' : s.joined.length + ' joined.',
+      joinedCount: s.joined.length,
+      c2Cta: s.joined.length > 0 ? 'Continue' : 'Skip for now',
+      custNext: () => this.go('cust', ['c1', 'c2', 'c3', 'c4'][Math.min(3, custIdx + 1)]),
+      custBack: () => this.go('cust', ['c1', 'c2', 'c3'][Math.max(0, custIdx - 1)]),
+      alerts: s.alerts, noAlerts: !s.alerts,
+      toggleAlerts: () => this.setState({ alerts: !s.alerts }),
+
+      storeSteps: [['Profile', 0], ['Earning', 1], ['Till code', 2], ['Reward', 3]].map(([label, i]) => ({
+        label, fill: i <= storeIdx, dim: i > storeIdx
+      })),
+      storeName: s.storeName, addr: s.addr, storeNameShown,
+      setStoreName: e => this.setState({ storeName: e.target.value }),
+      setAddr: e => this.setState({ addr: e.target.value }),
+      catChips: CATS.map(c => ({
+        label: c.label, on: s.cat === c.id, off: s.cat !== c.id,
+        go: () => this.setState({ cat: c.id })
+      })),
+      modeTabs: [['per_currency', 'Per £ spent'], ['per_visit', 'Fixed per visit']].map(([id, label]) => ({
+        label, on: s.mode === id, off: s.mode !== id,
+        go: () => this.setState({ mode: id, rate: id === 'per_visit' ? '10' : '1' })
+      })),
+      rateLabel: perVisit ? 'Points per visit' : 'Points per £1 spent',
+      rate: s.rate, minSpend: s.minSpend, preview,
+      setRate: e => this.setState({ rate: e.target.value.replace(/[^\d.]/g, '') }),
+      setMinSpend: e => this.setState({ minSpend: e.target.value.replace(/[^\d.]/g, '') }),
+      pin: s.pin, pinLabel: s.pinLabel,
+      setPin: e => this.setState({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) }),
+      setPinLabel: e => this.setState({ pinLabel: e.target.value }),
+      pinValid: s.pin.length === 4, pinInvalid: s.pin.length !== 4,
+      pinShort: s.pin.length > 0 && s.pin.length < 4,
+      rewardTitle: s.rewardTitle, rewardPts: s.rewardPts,
+      rewardTitleShown, rewardPtsShown: ptsNum,
+      setRewardTitle: e => this.setState({ rewardTitle: e.target.value }),
+      setRewardPts: e => this.setState({ rewardPts: e.target.value.replace(/\D/g, '').slice(0, 5) }),
+      rewardMath: perVisit
+        ? 'About ' + Math.max(1, Math.ceil(ptsNum / Math.max(1, Math.round(rateNum)))) + ' visits to earn it.'
+        : 'About ' + money(rateNum > 0 ? ptsNum / rateNum : 0) + ' of spend to earn it.',
+      storeNext: () => this.go('store', ['s1', 's2', 's3', 's4', 's5'][Math.min(4, storeIdx + 1)]),
+      storeBack: () => this.go('store', ['s1', 's2', 's3', 's4'][Math.max(0, storeIdx - 1)]),
+      checklist: [
+        { label: 'Shop profile', value: storeNameShown, done: true, todo: false },
+        { label: 'Earning rules', value: perVisit ? Math.round(rateNum) + ' per visit' : rateNum + ' per £1', done: true, todo: false },
+        { label: 'Till code', value: s.pin ? '•••• ' + (s.pinLabel || 'Staff') : '', done: s.pin.length === 4, todo: s.pin.length !== 4 },
+        { label: 'First reward', value: rewardTitleShown, done: s.rewardTitle.trim().length > 0, todo: s.rewardTitle.trim().length === 0 },
+        { label: 'Counter card printed', value: '', done: false, todo: true }
+      ]
+    };
+  }
+
+  componentWillUnmount() { clearTimeout(this._t); clearInterval(this._i); }
+}
+</script>
+</body>
+</html>

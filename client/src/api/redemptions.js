@@ -1,11 +1,11 @@
-import client from './client';
+import apiClient from './client';
 
-export async function initiateRedemption(rewardId) {
-  const { data } = await client.post('/dashboard/customer/redeem/initiate', { rewardId });
-  return data.data;
+export function initiateRedemption(rewardId) {
+  return apiClient.post('/dashboard/customer/redeem/initiate', { rewardId });
 }
 
-export async function cancelRedemption(redemptionId) {
-  const { data } = await client.post(`/dashboard/store/redeem/${redemptionId}/cancel`);
-  return data.data;
+// Only the store owner can cancel a pending redemption - there is no
+// customer-side cancel endpoint on the backend.
+export function cancelRedemption(redemptionId) {
+  return apiClient.post(`/dashboard/store/redeem/${redemptionId}/cancel`);
 }

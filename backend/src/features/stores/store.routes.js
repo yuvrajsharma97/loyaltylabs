@@ -2,7 +2,7 @@ const { Router } = require('express');
 const handler = require('./store.handler');
 const schemas = require('./store.validation');
 const validate = require('../../shared/middleware/validate.middleware');
-const { requireAuth } = require('../../shared/middleware/auth.middleware');
+const { requireAuth, optionalAuth } = require('../../shared/middleware/auth.middleware');
 const { requireRole } = require('../../shared/middleware/roleCheck.middleware');
 const { loadOwnedStore } = require('../../shared/middleware/storeScope.middleware');
 
@@ -12,7 +12,10 @@ const requireOwner = [requireAuth, requireRole('store_owner'), loadOwnedStore()]
 // customer dashboard namespace in app.js even though listStores itself needs
 // no auth (browsing before signup/verification is allowed).
 const customerRouter = Router();
-customerRouter.get('/', handler.listStores);
+// optionalAuth: anonymous browsing still works; a signed-in customer can also
+// filter by membership (joined / not joined).
+customerRouter.get('/', optionalAuth, handler.listStores);
+customerRouter.get('/:id', handler.getPublicStore);
 customerRouter.post('/:id/join', requireAuth, requireRole('customer'), handler.joinStore);
 
 // Store-owner dashboard: manage the store itself.

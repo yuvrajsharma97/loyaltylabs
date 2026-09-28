@@ -1,73 +1,95 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { listCustomers } from '../../api/admin';
-import Card from '../../shared/components/Card';
-import LoadingSpinner from '../../shared/components/LoadingSpinner';
+import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
+import * as adminApi from '../../api/admin';
+import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
+import Pagination from '../../shared/components/Pagination';
+import ListPage from '../../shared/components/ListPage';
+import ScrollPanel from '../../shared/components/ScrollPanel';
 import { formatDate } from '../../shared/utils/formatters';
+import SearchInput from '../../shared/components/SearchInput';
+import Card from '../../shared/components/Card';
+import Avatar from '../../shared/components/Avatar';
+import Badge from '../../shared/components/Badge';
+import Icon from '../../shared/components/Icon';
+import EmptyState from '../../shared/components/EmptyState';
+import SkeletonRow from '../../shared/components/SkeletonRow';
 
-export default function AdminCustomers() {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [customers, setCustomers] = useState(null);
+const PAGE_SIZE = 10;
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      listCustomers({ search: search.trim() || undefined })
-        .then(setCustomers)
-        .catch((err) => toast.error(err.message || 'Could not load customers'));
-    }, 300); // debounce so every keystroke doesn't fire a request
+const AdminCustomers = () => {
+  const [query, setQuery] = useState('');
+  const search = useDebouncedValue(query.trim());
 
-    return () => clearTimeout(timeout);
-  }, [search]);
+  const fetchPage = useCallback(
+    (page) =>
+      adminApi
+        .listCustomers({ search: search || undefined, page, limit: PAGE_SIZE })
+        .then(({ customers: fetched, pagination }) => ({ items: fetched, pagination })),
+    [search]
+  );
+  const { items: customers, pagination, setPage, isLoading } = usePaginatedList(fetchPage);
 
   return (
-    <div className="flex flex-col gap-xl max-w-[1100px] mx-auto">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Customers</h1>
-
-      <div className="flex items-center gap-xs bg-surface-container-low px-lg py-sm rounded-full border border-outline-variant w-full max-w-[420px]">
-        <span className="material-symbols-outlined text-outline">search</span>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or email..."
-          className="flex-1 bg-transparent border-none outline-none font-body text-body-md placeholder:text-outline"
-        />
-      </div>
-
-      {!customers ? (
-        <LoadingSpinner />
-      ) : customers.length === 0 ? (
-        <Card className="text-body-sm text-on-surface-variant">No customers found.</Card>
-      ) : (
-        <div className="flex flex-col gap-md">
-          {customers.map((customer) => (
-            <Card
-              key={customer._id}
-              hoverable
-              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-lg cursor-pointer"
-              onClick={() => navigate(`/admin/customers/${customer._id}`)}
-            >
-              <div className="flex flex-col gap-xs flex-1 min-w-0">
-                <div className="flex items-center gap-sm">
-                  <p className="font-body text-body-md font-semibold">{customer.name}</p>
-                  {!customer.emailVerified && (
-                    <span className="font-mono text-label-mono uppercase px-xs py-[2px] rounded bg-error-container text-on-error-container">
-                      Unverified
-                    </span>
-                  )}
-                </div>
-                <p className="text-body-sm text-on-surface-variant">{customer.email}</p>
-              </div>
-              <div className="flex items-center gap-xl shrink-0 text-body-sm text-on-surface-variant">
-                <span>{customer.membershipCount} store{customer.membershipCount === 1 ? '' : 's'}</span>
-                <span>Joined {formatDate(customer.createdAt)}</span>
-                <span className="material-symbols-outlined">chevron_right</span>
-              </div>
+    <ListPage
+      maxWidthClassName="max-w-3xl"
+      header={
+        <>
+          <h1 className="text-page-title text-text-primary">Customers</h1>
+          <p className="mt-1 text-body-sm text-text-secondary">Everyone with a customer account on the platform.</p>
+          <div className="mt-4">
+            <SearchInput
+              placeholder="Search by name or email"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        </>
+      }
+      footer={
+        <Pagination pagination={pagination} onPageChange={setPage} isDisabled={isLoading} itemLabel="customers" />
+      }
+    >
+      <ScrollPanel resetKey={customers[0]?._id} className="-mx-1 flex-1 px-1 py-1">
+        <div className={`flex flex-col gap-2 transition-opacity duration-150 ${isLoading && customers.length > 0 ? 'opacity-50' : ''}`}>
+          {isLoading && customers.length === 0 && (
+            <Card>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
             </Card>
+          )}
+
+          {!isLoading && customers.length === 0 && (
+            <EmptyState icon="person_search" title="No customers found" body="Try a different name or email." />
+          )}
+
+          {customers.map((customer) => (
+            <Link key={customer._id} to={`/admin/customers/${customer._id}`}>
+              <Card isInteractive className="flex items-center gap-3">
+                <Avatar name={customer.name} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-card-title text-text-primary">{customer.name}</p>
+                    {!customer.emailVerified && <Badge tone="warning">Unverified</Badge>}
+                    {!customer.onboardingCompleted && <Badge tone="neutral">Not onboarded</Badge>}
+                  </div>
+                  <p className="truncate text-body-sm text-text-secondary">{customer.email}</p>
+                </div>
+                <div className="hidden shrink-0 text-right wide:block">
+                  <p className="tabular-nums text-body-sm text-text-primary">
+                    {customer.membershipCount} shop{customer.membershipCount === 1 ? '' : 's'}
+                  </p>
+                  <p className="text-label text-text-muted">Joined {formatDate(customer.createdAt)}</p>
+                </div>
+                <Icon name="chevron_right" className="text-text-muted" />
+              </Card>
+            </Link>
           ))}
         </div>
-      )}
-    </div>
+      </ScrollPanel>
+    </ListPage>
   );
-}
+};
+
+export default AdminCustomers;

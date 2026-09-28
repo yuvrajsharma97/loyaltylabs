@@ -67,6 +67,25 @@ const logoutSchema = z.object({
   refreshToken: requiredString('refreshToken is required')
 });
 
+// Signed-in account's own details. Email is deliberately not editable here -
+// it's the login identity and gates verification/QR issuance.
+const updateAccountSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Name cannot be empty').max(80).optional(),
+    phone: z.string().trim().max(30).optional()
+  })
+  .refine((data) => Object.keys(data).length > 0, { error: 'At least one field must be provided' });
+
+// currentPassword is optional only for a Google-only customer who has never
+// set a password; the handler enforces it for everyone else.
+const changePasswordSchema = z.object({
+  currentPassword: z.string().optional(),
+  newPassword: requiredString('newPassword is required'),
+  // The caller's own refresh token, so that session survives while every
+  // other device is signed out.
+  refreshToken: z.string().optional()
+});
+
 module.exports = {
   registerCustomerSchema,
   verifyEmailSchema,
@@ -78,5 +97,7 @@ module.exports = {
   forgotPasswordSchema,
   resetPasswordSchema,
   refreshSchema,
-  logoutSchema
+  logoutSchema,
+  updateAccountSchema,
+  changePasswordSchema
 };

@@ -1,104 +1,92 @@
 import { useState } from 'react';
-import toast from 'react-hot-toast';
-import { updateStore } from '../../api/storeOwner';
-import { useStore } from './OwnerDashboard';
-import Card from '../../shared/components/Card';
+import * as storesApi from '../../api/stores';
+import { useAuth } from '../../shared/hooks/useAuth';
+import { showSuccessToast, showErrorToast } from '../../shared/utils/toast';
+import { getPlaceholderImageUrl } from '../../shared/utils/placeholderImage';
+import { CATEGORIES } from '../../shared/utils/labels';
 import Button from '../../shared/components/Button';
+import Input from '../../shared/components/Input';
+import ToggleSwitch from '../../shared/components/ToggleSwitch';
 
-const CATEGORIES = [
-  { value: 'cafe', label: 'Cafe' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'services', label: 'Services' },
-  { value: 'other', label: 'Other' }
-];
-
-const inputClass =
-  'w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-md font-body text-body-md placeholder:text-outline outline-none focus:border-primary transition-all';
-const labelClass = 'font-body text-body-sm text-on-surface-variant ml-xs';
-
-export default function StoreSettings() {
-  const { store, refetch } = useStore();
+const StoreSettings = () => {
+  const { user: store, refreshProfile } = useAuth();
   const [name, setName] = useState(store.name);
   const [address, setAddress] = useState(store.address || '');
   const [logoUrl, setLogoUrl] = useState(store.logoUrl || '');
   const [category, setCategory] = useState(store.category);
   const [discoverable, setDiscoverable] = useState(store.discoverable);
-  const [saving, setSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error('Store name is required');
+      showErrorToast('Store name is required.');
       return;
     }
-    setSaving(true);
+    setIsSaving(true);
     try {
-      await updateStore(store._id, {
-        name,
-        address: address || undefined,
-        logoUrl: logoUrl || undefined,
+      await storesApi.updateStore(store._id, {
+        name: name.trim(),
+        address,
+        logoUrl: logoUrl.trim(),
         category,
-        discoverable
+        discoverable,
       });
-      await refetch();
-      toast.success('Saved');
-    } catch (err) {
-      toast.error(err.message || 'Could not save store settings');
+      await refreshProfile();
+      showSuccessToast('Store profile updated.');
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
   return (
-    <Card className="flex flex-col gap-lg">
-      <h2 className="font-display text-headline-sm">Store information</h2>
-      <div className="space-y-xs">
-        <label className={labelClass}>Store name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-      </div>
-      <div className="space-y-xs">
-        <label className={labelClass}>Address</label>
-        <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
-      </div>
-      <div className="space-y-xs">
-        <label className={labelClass}>Logo URL</label>
-        <input
-          value={logoUrl}
-          onChange={(e) => setLogoUrl(e.target.value)}
-          placeholder="https://..."
-          className={inputClass}
+    <div className="flex flex-col gap-4">
+      <Input label="Store name" value={name} onChange={(event) => setName(event.target.value)} required />
+      <Input label="Address" value={address} onChange={(event) => setAddress(event.target.value)} />
+
+      <div className="flex items-end gap-3">
+        <img
+          src={logoUrl.trim() || getPlaceholderImageUrl(name)}
+          alt=""
+          className="h-11 w-11 shrink-0 rounded-button border border-border object-cover"
         />
-      </div>
-      <div className="space-y-xs">
-        <label className={labelClass}>Category</label>
-        <div className="grid grid-cols-2 gap-sm">
-          {CATEGORIES.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setCategory(value)}
-              className={`py-md rounded-lg font-body text-body-sm font-semibold border-2 transition-all ${
-                category === value
-                  ? 'border-primary bg-primary-container/20 text-primary'
-                  : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="min-w-0 flex-1">
+          <Input
+            label="Logo URL (optional)"
+            type="url"
+            placeholder="https://..."
+            value={logoUrl}
+            onChange={(event) => setLogoUrl(event.target.value)}
+            className="w-full"
+          />
         </div>
       </div>
-      <label className="flex items-center justify-between px-md py-md rounded-lg bg-surface-container-low">
-        <span className="font-body text-body-md">Discoverable in the shop directory</span>
-        <input
-          type="checkbox"
-          checked={discoverable}
-          onChange={(e) => setDiscoverable(e.target.checked)}
-          className="w-5 h-5 accent-primary"
-        />
-      </label>
-      <Button loading={saving} onClick={handleSave} className="w-fit px-xl">
-        Save
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-label text-text-secondary">Category</label>
+        <select
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
+          className="h-11 rounded-input border border-border bg-surface px-3 text-body text-text-primary outline-none focus:border-primary"
+        >
+          {CATEGORIES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <ToggleSwitch
+        label="Discoverable in the shop directory"
+        checked={discoverable}
+        onChange={setDiscoverable}
+      />
+
+      <Button isLoading={isSaving} onClick={handleSave} className="self-start">
+        Save changes
       </Button>
-    </Card>
+    </div>
   );
-}
+};
+
+export default StoreSettings;

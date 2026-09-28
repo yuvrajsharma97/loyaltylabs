@@ -1,143 +1,154 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import toast, { Toaster, ToastBar } from 'react-hot-toast';
-import { AuthProvider, useAuth, resolvePostAuthPath } from './shared/hooks/useAuth';
-import { useTheme } from './shared/hooks/useTheme';
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from './shared/hooks/useAuth';
+import LoadingSpinner from './shared/components/LoadingSpinner';
 import ProtectedRoute from './shared/components/ProtectedRoute';
-import SignInPage from './features/auth/SignInPage';
-import SignUpPage from './features/auth/SignUpPage';
-import VerifyEmailPage from './features/auth/VerifyEmailPage';
-import CustomerOnboarding from './features/onboarding/CustomerOnboarding';
-import StoreOnboarding from './features/onboarding/StoreOnboarding';
-import CustomerDashboard from './features/customer/CustomerDashboard';
-import OwnerDashboard from './features/owner/OwnerDashboard';
-import AdminSignInPage from './features/admin/AdminSignInPage';
-import AdminDashboard from './features/admin/AdminDashboard';
 
-function ThemeToggleButton() {
-  const { theme, toggleTheme } = useTheme();
-  return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      aria-label="Toggle theme"
-      className="fixed bottom-lg right-lg z-50 w-11 h-11 rounded-full bg-surface-container-high text-on-surface shadow-lg flex items-center justify-center hover:bg-surface-container-highest transition-colors"
-    >
-      <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
-    </button>
-  );
+const LandingPage = lazy(() => import('./features/landing/LandingPage'));
+const SignInPage = lazy(() => import('./features/auth/SignInPage'));
+const SignUpPage = lazy(() => import('./features/auth/SignUpPage'));
+const VerifyEmailPage = lazy(() => import('./features/auth/VerifyEmailPage'));
+const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage'));
+const AdminSignInPage = lazy(() => import('./features/auth/AdminSignInPage'));
+const CustomerOnboarding = lazy(() => import('./features/onboarding/CustomerOnboarding'));
+const StoreOnboarding = lazy(() => import('./features/onboarding/StoreOnboarding'));
+const CustomerShell = lazy(() => import('./features/customer/CustomerShell'));
+const CustomerHome = lazy(() => import('./features/customer/CustomerHome'));
+const StoreDirectory = lazy(() => import('./features/customer/StoreDirectory'));
+const StoreDetail = lazy(() => import('./features/customer/StoreDetail'));
+const CustomerQRScreen = lazy(() => import('./features/customer/CustomerQRScreen'));
+const Wallet = lazy(() => import('./features/customer/Wallet'));
+const AccountSettings = lazy(() => import('./features/customer/AccountSettings'));
+const OwnerShell = lazy(() => import('./features/owner/OwnerShell'));
+const OwnerDashboard = lazy(() => import('./features/owner/OwnerDashboard'));
+const Till = lazy(() => import('./features/owner/till/Till'));
+const Rewards = lazy(() => import('./features/owner/Rewards'));
+const OwnerTransactionHistory = lazy(() => import('./features/owner/OwnerTransactionHistory'));
+const DisputesPanel = lazy(() => import('./features/owner/DisputesPanel'));
+const Settings = lazy(() => import('./features/owner/Settings'));
+const AdminShell = lazy(() => import('./features/admin/AdminShell'));
+const AdminOverview = lazy(() => import('./features/admin/AdminOverview'));
+const AdminStores = lazy(() => import('./features/admin/AdminStores'));
+const AdminDisputes = lazy(() => import('./features/admin/AdminDisputes'));
+const AdminCustomers = lazy(() => import('./features/admin/AdminCustomers'));
+const AdminCustomerDetail = lazy(() => import('./features/admin/AdminCustomerDetail'));
+const AdminHealth = lazy(() => import('./features/admin/AdminHealth'));
+
+function isStoreFullyOnboarded(store) {
+  const steps = store?.onboardingCompleted;
+  return Boolean(steps?.loyaltyRuleSet && steps?.firstRewardAdded && steps?.tillModeTested);
 }
 
-// Decides dashboard vs. onboarding for both a fresh login and a page
-// refresh while already authenticated - resolvePostAuthPath hits the API
-// since onboarding status isn't in the JWT/session.
-function RoleHomeRedirect() {
-  const { isAuthenticated, role } = useAuth();
-  const [path, setPath] = useState(null);
+const RootRedirect = () => {
+  const { isAuthenticated, isLoading, role, user } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    resolvePostAuthPath(role).then(setPath).catch(() => setPath('/sign-in'));
-  }, [isAuthenticated, role]);
+  if (isLoading) {
+    return <LoadingSpinner className="h-screen" />;
+  }
 
-  if (!isAuthenticated) return <Navigate to="/sign-in" replace />;
-  if (!path) return null;
-  return <Navigate to={path} replace />;
-}
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
 
-function App() {
-  useTheme();
+  if (role === 'customer') {
+    return <Navigate to={user?.onboardingCompleted ? '/customer/home' : '/onboarding/customer'} replace />;
+  }
 
+  if (role === 'store_owner') {
+    return <Navigate to={isStoreFullyOnboarded(user) ? '/store/overview' : '/onboarding/store'} replace />;
+  }
+
+  if (role === 'super_admin') {
+    return <Navigate to="/admin/stats" replace />;
+  }
+
+  return <Navigate to="/sign-in" replace />;
+};
+
+const App = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RoleHomeRedirect />} />
-          <Route path="/sign-in" element={<SignInPage />} />
-          <Route path="/sign-up" element={<SignUpPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          {/* Not linked from any nav/UI - reachable only by typing the URL directly. */}
-          <Route path="/admin/login" element={<AdminSignInPage />} />
-          <Route
-            path="/onboarding/customer"
-            element={
-              <ProtectedRoute role="customer">
-                <CustomerOnboarding />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/onboarding/store"
-            element={
-              <ProtectedRoute role="store_owner">
-                <StoreOnboarding />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/customer/*"
-            element={
-              <ProtectedRoute role="customer">
-                <CustomerDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/store/*"
-            element={
-              <ProtectedRoute role="store_owner">
-                <OwnerDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute role="super_admin" redirectTo="/admin/login">
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <ThemeToggleButton />
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            duration: 10000,
-            style: {
-              background: 'var(--color-surface-container-high)',
-              color: 'var(--color-on-surface)',
-              border: '1px solid var(--color-outline-variant)'
-            },
-            success: { iconTheme: { primary: 'var(--color-primary)', secondary: 'var(--color-on-primary)' } },
-            error: { iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-on-error)' } }
-          }}
+    <Suspense fallback={<LoadingSpinner className="h-screen" />}>
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/admin/login" element={<AdminSignInPage />} />
+
+        <Route
+          path="/onboarding/customer"
+          element={
+            <ProtectedRoute role="customer">
+              <CustomerOnboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/store"
+          element={
+            <ProtectedRoute role="store_owner">
+              <StoreOnboarding />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/customer"
+          element={
+            <ProtectedRoute role="customer">
+              <CustomerShell />
+            </ProtectedRoute>
+          }
         >
-          {(t) => (
-            <ToastBar toast={t}>
-              {({ icon, message }) => (
-                <>
-                  {icon}
-                  {message}
-                  {t.type !== 'loading' && (
-                    <button
-                      type="button"
-                      onClick={() => toast.dismiss(t.id)}
-                      aria-label="Dismiss notification"
-                      className="flex items-center justify-center rounded-full p-1 text-on-surface-variant hover:bg-surface-container-highest transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                  )}
-                </>
-              )}
-            </ToastBar>
-          )}
-        </Toaster>
-      </BrowserRouter>
-    </AuthProvider>
+          <Route index element={<Navigate to="home" replace />} />
+          <Route path="home" element={<CustomerHome />} />
+          <Route path="shops" element={<StoreDirectory />} />
+          <Route path="shops/:storeId" element={<StoreDetail />} />
+          <Route path="scan" element={<CustomerQRScreen />} />
+          <Route path="wallet" element={<Wallet />} />
+          <Route path="account" element={<AccountSettings />} />
+        </Route>
+
+        <Route
+          path="/store"
+          element={
+            <ProtectedRoute role="store_owner">
+              <OwnerShell />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<OwnerDashboard />} />
+          <Route path="till" element={<Till />} />
+          <Route path="rewards" element={<Rewards />} />
+          <Route path="transactions" element={<OwnerTransactionHistory />} />
+          <Route path="disputes" element={<DisputesPanel />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="super_admin">
+              <AdminShell />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="stats" replace />} />
+          <Route path="stats" element={<AdminOverview />} />
+          <Route path="stores" element={<AdminStores />} />
+          <Route path="customers" element={<AdminCustomers />} />
+          <Route path="customers/:id" element={<AdminCustomerDetail />} />
+          <Route path="disputes" element={<AdminDisputes />} />
+          <Route path="approvals" element={<Navigate to="/admin/disputes" replace />} />
+          <Route path="health" element={<AdminHealth />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
-}
+};
 
 export default App;

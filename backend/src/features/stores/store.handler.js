@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const { isValidObjectId } = require('../../shared/utils/objectId');
+const { parsePagination, paginateQuery, escapeRegex } = require('../../shared/utils/pagination');
 
 const Store = require('./store.model');
 const Membership = require('../memberships/membership.model');
@@ -13,13 +14,21 @@ const VERIFICATION_METHODS = ['qr_scan', 'slug_manual'];
 
 const STORE_CATEGORIES = ['cafe', 'retail', 'services', 'other'];
 
+const PUBLIC_STORE_FIELDS = 'name address logoUrl category loyaltyProgram.mode createdAt';
+
 /**
  * Public store directory - visible to unverified/unauthenticated users too
  * (gives them a reason to verify/sign up). Optional category filter/multi-
  * filter powers the customer onboarding "shops matching your interests" step.
+ * `membership` only applies to a signed-in customer (optionalAuth) and splits
+ * the directory into shops they've joined vs ones they haven't.
  * @route GET /stores
  * @access Public
  * @query {string} [category] - comma-separated, e.g. "cafe,retail"
+ * @query {string} [search] - case-insensitive name match
+ * @query {'joined'|'not_joined'} [membership]
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const listStores = asyncHandler(async (req, res) => {
   const filter = { discoverable: true, status: 'active' };
@@ -31,9 +40,43 @@ const listStores = asyncHandler(async (req, res) => {
     }
   }
 
-  const stores = await Store.find(filter).select('name address logoUrl category loyaltyProgram.mode createdAt');
+  if (req.query.search) {
+    filter.name = new RegExp(escapeRegex(req.query.search.trim()), 'i');
+  }
 
-  res.json({ success: true, data: { stores } });
+  const isCustomer = req.auth && req.auth.role === 'customer';
+  if (isCustomer && (req.query.membership === 'joined' || req.query.membership === 'not_joined')) {
+    const joinedStoreIds = await Membership.find({ customerId: req.auth.id }).distinct('storeId');
+    filter._id = req.query.membership === 'joined' ? { $in: joinedStoreIds } : { $nin: joinedStoreIds };
+  }
+
+  const paging = parsePagination(req.query, { maxLimit: 50 });
+  const { items: stores, pagination } = await paginateQuery(Store, filter, paging, {
+    sort: { name: 1, _id: 1 },
+    select: PUBLIC_STORE_FIELDS
+  });
+
+  res.json({ success: true, data: { stores, pagination } });
+});
+
+/**
+ * One store's public profile (same fields as the directory) - for the
+ * customer's shop page, so it doesn't have to page through the directory.
+ * @route GET /stores/:id
+ * @access Public
+ */
+const getPublicStore = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) {
+    throw new AppError('STORE_NOT_FOUND', 'Store not found', 404);
+  }
+
+  const store = await Store.findOne({ _id: id, discoverable: true, status: 'active' }).select(PUBLIC_STORE_FIELDS);
+  if (!store) {
+    throw new AppError('STORE_NOT_FOUND', 'Store not found', 404);
+  }
+
+  res.json({ success: true, data: store });
 });
 
 /**
@@ -177,6 +220,8 @@ const getOnboarding = asyncHandler(async (req, res) => {
  * @route GET /stores/:id/disputes
  * @access Private (store_owner, owner of this store)
  * @query {'open'|'resolved'} [status]
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  */
 const listStoreDisputes = asyncHandler(async (req, res) => {
   const filter = { storeId: req.store._id };
@@ -184,33 +229,26 @@ const listStoreDisputes = asyncHandler(async (req, res) => {
     filter.status = req.query.status;
   }
 
-  const disputes = await Dispute.find(filter).sort({ createdAt: -1 });
-  res.json({ success: true, data: { disputes } });
+  const { items: disputes, pagination } = await paginateQuery(Dispute, filter, parsePagination(req.query), {
+    sort: { createdAt: -1, _id: -1 }
+  });
+  res.json({ success: true, data: { disputes, pagination } });
 });
 
 /**
- * Owner's ledger view - cursor-paginated, filterable by type/verificationMethod
+ * Owner's ledger view - page-paginated, filterable by type/verificationMethod
  * per the plan's A3 phase note ("owner view with filters including
  * verificationMethod"). Companion to the customer's own
  * GET /customers/me/transactions, scoped to this store instead of one customer.
  * @route GET /stores/:id/transactions
  * @access Private (store_owner, owner of this store)
- * @query {number} [limit=20]
- * @query {string} [before] - ISO createdAt cursor
+ * @query {number} [page=1]
+ * @query {number} [limit=10]
  * @query {string} [type]
  * @query {'qr_scan'|'slug_manual'} [verificationMethod]
  */
 const listStoreTransactions = asyncHandler(async (req, res) => {
-  const parsedLimit = parseInt(req.query.limit, 10);
-  const limit = Math.min(Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 20 : parsedLimit, 100);
-
   const filter = { storeId: req.store._id };
-  if (req.query.before) {
-    const before = new Date(req.query.before);
-    if (!Number.isNaN(before.getTime())) {
-      filter.createdAt = { $lt: before };
-    }
-  }
   if (TRANSACTION_TYPES.includes(req.query.type)) {
     filter.type = req.query.type;
   }
@@ -218,15 +256,14 @@ const listStoreTransactions = asyncHandler(async (req, res) => {
     filter.verificationMethod = req.query.verificationMethod;
   }
 
-  const transactions = await PointTransaction.find(filter).sort({ createdAt: -1 }).limit(limit);
+  const { items: transactions, pagination } = await paginateQuery(
+    PointTransaction,
+    filter,
+    parsePagination(req.query),
+    { sort: { createdAt: -1, _id: -1 } }
+  );
 
-  res.json({
-    success: true,
-    data: {
-      transactions,
-      nextCursor: transactions.length === limit ? transactions[transactions.length - 1].createdAt : null
-    }
-  });
+  res.json({ success: true, data: { transactions, pagination } });
 });
 
 /**
@@ -286,6 +323,7 @@ const getStoreAnalytics = asyncHandler(async (req, res) => {
 
 module.exports = {
   listStores,
+  getPublicStore,
   joinStore,
   getMyStore,
   getStore,

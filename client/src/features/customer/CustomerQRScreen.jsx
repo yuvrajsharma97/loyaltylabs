@@ -1,56 +1,59 @@
 import { useEffect, useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { getQrToken } from '../../api/customer';
-import { useCustomer } from './CustomerDashboard';
+import * as customerApi from '../../api/customer';
+import { useAuth } from '../../shared/hooks/useAuth';
+import QRPanel from '../../shared/components/QRPanel';
 import Card from '../../shared/components/Card';
+import EmptyState from '../../shared/components/EmptyState';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 
-export default function CustomerQRScreen() {
-  const { me } = useCustomer();
+const CustomerQRScreen = () => {
+  const { user } = useAuth();
   const [qrToken, setQrToken] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    getQrToken()
-      .then((data) => setQrToken(data.qrToken))
-      .catch((err) => setError(err));
+    customerApi
+      .getQrToken()
+      .then(({ qrToken: token }) => setQrToken(token))
+      .catch((err) => setError(err))
+      .finally(() => setIsLoading(false));
   }, []);
 
+  if (isLoading) {
+    return <LoadingSpinner className="py-16" />;
+  }
+
   return (
-    <div className="flex flex-col items-center gap-xl max-w-[480px] mx-auto text-center">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Your loyalty QR code</h1>
+    <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-4 py-10 text-center">
+      <h1 className="text-page-title text-text-primary">Your code</h1>
 
       {error?.code === 'QR_NOT_ISSUED' ? (
-        <Card className="w-full">
-          <p className="text-body-md">Verify your email address to activate your loyalty QR code.</p>
-        </Card>
+        <EmptyState
+          icon="lock"
+          title="Verify your email first"
+          body="Your code is issued once your email address is verified."
+        />
       ) : error ? (
-        <Card className="w-full text-error">{error.message || 'Could not load your QR code'}</Card>
-      ) : !qrToken ? (
-        <LoadingSpinner />
+        <EmptyState icon="error" title="Couldn't load your code" body={error.message} />
       ) : (
-        <Card className="w-full flex flex-col items-center gap-lg">
-          <div className="bg-white p-lg rounded-lg">
-            <QRCodeSVG value={qrToken} size={220} />
-          </div>
-          <p className="text-body-sm text-on-surface-variant">
-            Show this to a staff member at checkout to earn points or redeem active rewards.
+        <>
+          <QRPanel qrToken={qrToken} />
+          <p className="text-body-sm text-text-secondary">
+            Show this to the till to earn points or collect a reward.
           </p>
 
-          <div className="w-full flex items-center gap-lg py-sm">
-            <div className="flex-grow border-t border-outline-variant" />
-            <span className="flex-shrink text-outline font-mono text-[10px] uppercase tracking-widest">
-              If the scanner can't read it
-            </span>
-            <div className="flex-grow border-t border-outline-variant" />
-          </div>
-
-          <div className="w-full flex flex-col items-center gap-xs">
-            <p className="text-body-sm text-on-surface-variant">Give staff this code</p>
-            <p className="font-mono text-headline-sm tracking-[0.2em] text-primary">{me.slug}</p>
-          </div>
-        </Card>
+          {user?.slug && (
+            <Card className="flex w-full flex-col items-center gap-1">
+              <p className="font-mono text-caption-mono uppercase text-text-muted">If the scanner can&apos;t read it</p>
+              <p className="text-body-sm text-text-secondary">Give staff this code</p>
+              <p className="break-all font-mono text-section tracking-wider text-primary">{user.slug}</p>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
-}
+};
+
+export default CustomerQRScreen;

@@ -1,29 +1,46 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import Icon from './Icon';
 
-export default function PasswordInput({ id, value, onChange, placeholder, required = true, minLength }) {
-  const [visible, setVisible] = useState(false);
+const PasswordInput = ({ label = 'Password', error, id, className = '', ...props }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const generatedId = useId();
+  const inputId = id || generatedId;
+
+  const handleToggleVisibility = () => {
+    setIsVisible((currentIsVisible) => !currentIsVisible);
+  };
+
+  const borderClasses = error
+    ? 'border-error focus-within:border-error'
+    : 'border-border focus-within:border-primary';
 
   return (
-    <div className="relative flex items-center rounded-lg">
-      <span className="material-symbols-outlined absolute left-md text-outline">lock</span>
-      <input
-        id={id}
-        type={visible ? 'text' : 'password'}
-        required={required}
-        minLength={minLength}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className="w-full pl-11 pr-11 py-[14px] bg-surface-container-low border border-outline-variant rounded-lg text-on-surface placeholder:text-outline focus:border-primary focus:ring-0 transition-all outline-none"
-      />
-      <button
-        type="button"
-        onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
-        className="absolute right-md p-xs text-outline hover:text-primary transition-colors focus:outline-none"
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-label text-text-secondary">
+        {label}
+      </label>
+      <div
+        className={`flex h-11 items-center gap-2 rounded-input border bg-surface px-3 ${borderClasses}`}
       >
-        <span className="material-symbols-outlined">{visible ? 'visibility_off' : 'visibility'}</span>
-      </button>
+        <Icon name="lock" className="text-text-muted" />
+        <input
+          id={inputId}
+          type={isVisible ? 'text' : 'password'}
+          className={`h-full flex-1 bg-transparent text-body text-text-primary outline-none ${className}`}
+          {...props}
+        />
+        <button
+          type="button"
+          onClick={handleToggleVisibility}
+          aria-label={isVisible ? 'Hide password' : 'Show password'}
+          className="flex items-center text-text-muted hover:text-text-primary"
+        >
+          <Icon name={isVisible ? 'visibility_off' : 'visibility'} />
+        </button>
+      </div>
+      {error && <span className="text-body-sm text-error-text">{error}</span>}
     </div>
   );
-}
+};
+
+export default PasswordInput;

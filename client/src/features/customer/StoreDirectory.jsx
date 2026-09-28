@@ -1,246 +1,175 @@
-import { useEffect, useMemo, useState } from 'react';
-import toast from 'react-hot-toast';
-import { listStores, joinStore } from '../../api/stores';
-import { useCustomer } from './CustomerDashboard';
+import { useCallback, useMemo, useState } from 'react';
+import * as storesApi from '../../api/stores';
+import { useAuth } from '../../shared/hooks/useAuth';
+import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
+import Pagination from '../../shared/components/Pagination';
+import ListPage from '../../shared/components/ListPage';
+import ScrollPanel from '../../shared/components/ScrollPanel';
+import { showSuccessToast } from '../../shared/utils/toast';
+import { CATEGORIES } from '../../shared/utils/labels';
+import SearchInput from '../../shared/components/SearchInput';
+import SegmentedControl from '../../shared/components/SegmentedControl';
+import StoreCard from '../../shared/components/StoreCard';
 import Card from '../../shared/components/Card';
-import Button from '../../shared/components/Button';
-import LoadingSpinner from '../../shared/components/LoadingSpinner';
-import ShopCard from './ShopCard';
-import { placeholderImageUrl } from '../../shared/utils/placeholderImage';
+import Icon from '../../shared/components/Icon';
+import EmptyState from '../../shared/components/EmptyState';
+import SkeletonRow from '../../shared/components/SkeletonRow';
 
-const CATEGORIES = [
-  { value: 'cafe', label: 'Coffee & Cafes', icon: 'local_cafe' },
-  { value: 'services', label: 'Barbers & Beauty', icon: 'content_cut' },
-  { value: 'retail', label: 'Retail & Boutiques', icon: 'shopping_bag' },
-  { value: 'other', label: 'Other', icon: 'apps' }
+const CATEGORY_FILTERS = [{ value: '', label: 'All shops', icon: 'storefront' }, ...CATEGORIES];
+
+// value is the API's `membership` filter ('' = every shop).
+const SHOP_TABS = [
+  { value: '', label: 'All' },
+  { value: 'joined', label: 'Your shops' },
+  { value: 'not_joined', label: 'Discover' },
 ];
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 10;
 
-export default function StoreDirectory() {
-  const { me } = useCustomer();
-  const [stores, setStores] = useState(null);
-  const [category, setCategory] = useState(null);
-  const [search, setSearch] = useState('');
-  const [shopsTab, setShopsTab] = useState('subscribed');
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [joiningId, setJoiningId] = useState(null);
-  const [joinedIds, setJoinedIds] = useState(() => new Set(me.memberships.map((m) => m.storeId)));
+const StoreDirectory = () => {
+  const { user, refreshProfile } = useAuth();
+  const [category, setCategory] = useState('');
+  const [membership, setMembership] = useState('');
+  const [query, setQuery] = useState('');
+  const [joiningStoreId, setJoiningStoreId] = useState(null);
+  const search = useDebouncedValue(query.trim());
 
-  useEffect(() => {
-    listStores(category ? { category: [category] } : undefined)
-      .then(setStores)
-      .catch((err) => toast.error(err.message || 'Could not load shops'));
-  }, [category]);
+  // Search, category and membership filtering all happen server-side so they
+  // apply across every page, not just the one on screen.
+  const fetchPage = useCallback(
+    (page) =>
+      storesApi
+        .listStores({
+          category: category || undefined,
+          membership: membership || undefined,
+          search: search || undefined,
+          page,
+          limit: PAGE_SIZE,
+        })
+        .then(({ stores, pagination }) => ({ items: stores, pagination })),
+    [category, membership, search]
+  );
+  const { items: visibleStores, pagination, setPage, isLoading, reload } = usePaginatedList(fetchPage);
 
-  const filtered = useMemo(() => {
-    if (!stores) return null;
-    const bySearch = search.trim()
-      ? stores.filter((s) => s.name.toLowerCase().includes(search.trim().toLowerCase()))
-      : stores;
-    return bySearch.filter((s) =>
-      shopsTab === 'subscribed' ? joinedIds.has(s._id) : !joinedIds.has(s._id)
-    );
-  }, [stores, search, shopsTab, joinedIds]);
+  const joinedStoreIds = useMemo(
+    () => new Set((user?.memberships || []).map((item) => item.storeId)),
+    [user]
+  );
 
-  // Reset pagination whenever the active filter/search/tab changes, so
-  // switching categories or tabs doesn't leave you deep into a stale
-  // "load more" position. Adjusted during render (React's documented
-  // pattern for resetting state when an input changes) rather than in an
-  // effect, which would cause an extra commit-then-recommit render pass.
-  const filterKey = `${category}|${search}|${shopsTab}`;
-  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
-  let effectiveVisibleCount = visibleCount;
-  if (filterKey !== prevFilterKey) {
-    setPrevFilterKey(filterKey);
-    effectiveVisibleCount = PAGE_SIZE;
-    setVisibleCount(PAGE_SIZE);
-  }
-
-  const visible = filtered ? filtered.slice(0, effectiveVisibleCount) : null;
-
-  const handleJoin = async (storeId) => {
-    setJoiningId(storeId);
+  const handleJoin = async (store) => {
+    setJoiningStoreId(store._id);
     try {
-      await joinStore(storeId);
-      setJoinedIds((prev) => new Set(prev).add(storeId));
-      toast.success('Joined!');
+      await storesApi.joinStore(store._id);
+      showSuccessToast(`You joined ${store.name}.`);
     } catch (err) {
-      if (err.code === 'ALREADY_A_MEMBER') {
-        setJoinedIds((prev) => new Set(prev).add(storeId));
-      } else {
-        toast.error(err.message || 'Could not join this store');
-      }
+      if (err.code !== 'ALREADY_A_MEMBER') throw err;
     } finally {
-      setJoiningId(null);
+      await refreshProfile();
+      setJoiningStoreId(null);
+      // On "Discover" the joined shop now drops out of the list.
+      if (membership === 'not_joined') reload();
     }
   };
 
-  return (
-    <div className="flex flex-col gap-xl max-w-[1400px] mx-auto">
-      {/* Hero */}
-      <section className="relative h-64 md:h-80 w-full rounded-3xl overflow-hidden elevation-l1">
-        <img
-          alt="Neighborhood street with local shops"
-          className="absolute inset-0 w-full h-full object-cover"
-          src={placeholderImageUrl('shops-directory-hero', 1400, 700)}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-xl text-white">
-          <h1 className="font-display text-display-md-mobile md:text-display-lg font-bold mb-xs">
-            Explore neighborhood gems
-          </h1>
-          <p className="text-white/90 text-body-md max-w-[36rem]">
-            Support local shops and earn rewards at your favorite neighborhood spots.
-          </p>
+  const header = (
+    <>
+      {/* Phones: just the search box (the shell header already says "Shops"),
+          so the list keeps most of the screen. Wider screens: the tinted hero. */}
+      <section className="wide:rounded-card wide:border wide:border-border wide:bg-primary-tint wide:p-5">
+        <h1 className="hidden text-page-title text-text-primary wide:block">Explore neighbourhood gems</h1>
+        <p className="mt-1 hidden max-w-lg text-body-sm text-text-secondary wide:block">
+          Support local shops and earn rewards at your favourite spots nearby.
+        </p>
+        <div className="wide:mt-4">
+          <SearchInput placeholder="Search shops" value={query} onChange={(event) => setQuery(event.target.value)} />
         </div>
       </section>
 
-      {/* Category filter, mobile: a horizontally-scrollable tab row instead
-          of the desktop sidebar's vertical list - hidden at lg+. */}
-      <div className="lg:hidden -mx-container-margin px-container-margin overflow-x-auto">
-        <div className="flex gap-sm w-max pb-xs">
-          <button
-            type="button"
-            onClick={() => setCategory(null)}
-            className={`shrink-0 flex items-center gap-xs px-lg py-sm rounded-full font-body text-body-sm font-semibold transition-all active:scale-95 ${
-              category === null
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
-            }`}
+      <div className="mt-3 flex flex-wrap items-center gap-2 wide:mt-4">
+        {/* Category: a compact dropdown on phones, chips on wider screens. */}
+        <label className="relative wide:hidden">
+          <span className="sr-only">Category</span>
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="h-10 appearance-none rounded-pill border border-border bg-surface pl-3.5 pr-8 text-label text-text-primary outline-none focus:border-primary"
           >
-            <span className="material-symbols-outlined text-[18px]">storefront</span>
-            All Shops
-          </button>
-          {CATEGORIES.map(({ value, label, icon }) => (
+            {CATEGORY_FILTERS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Icon
+            name="expand_more"
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
+            style={{ fontSize: '1.1rem' }}
+          />
+        </label>
+
+        <div className="hidden basis-full flex-wrap gap-2 wide:flex">
+          {CATEGORY_FILTERS.map((option) => (
             <button
-              key={value}
+              key={option.value}
               type="button"
-              onClick={() => setCategory(value)}
-              className={`shrink-0 flex items-center gap-xs px-lg py-sm rounded-full font-body text-body-sm font-semibold transition-all active:scale-95 ${
-                category === value
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+              onClick={() => setCategory(option.value)}
+              className={`flex items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-label transition-colors duration-150 ${
+                category === option.value
+                  ? 'border-primary bg-primary-tint text-primary'
+                  : 'border-border bg-surface text-text-secondary hover:text-text-primary'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">{icon}</span>
-              {label}
+              <Icon name={option.icon} style={{ fontSize: '1.05rem' }} />
+              {option.label}
             </button>
           ))}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-xl items-start">
-        {/* Category filter sidebar (desktop only, lg+) - a normal in-flow
-            column (not fixed), so it never competes with the app's own
-            floating top nav. Mobile uses the tab row above instead. */}
-        <aside className="hidden lg:flex flex-col gap-xs bg-surface-container-low rounded-2xl p-lg lg:sticky lg:top-24">
-          <div className="mb-sm">
-            <h2 className="font-display text-body-lg font-bold text-primary">Categories</h2>
-            <p className="text-on-surface-variant text-body-sm">Filter by shop type</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setCategory(null)}
-            className={`flex items-center gap-sm px-md py-sm rounded-lg font-body text-body-md font-semibold transition-all active:scale-95 ${
-              category === null
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+        <SegmentedControl options={SHOP_TABS} value={membership} onChange={setMembership} className="wide:mt-1" />
+      </div>
+    </>
+  );
+
+  return (
+    <ListPage
+      maxWidthClassName="max-w-5xl"
+      header={header}
+      footer={<Pagination pagination={pagination} onPageChange={setPage} isDisabled={isLoading} itemLabel="shops" />}
+    >
+      <ScrollPanel resetKey={visibleStores[0]?._id} className="-mx-1 flex-1 px-1 py-1">
+        {isLoading && visibleStores.length === 0 ? (
+          <Card>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </Card>
+        ) : visibleStores.length === 0 ? (
+          <EmptyState
+            icon={membership === 'joined' ? 'storefront' : 'search_off'}
+            title={membership === 'joined' ? 'No joined shops match' : 'No shops found'}
+            body={membership === 'joined' ? 'Switch to Discover to find one.' : 'Try a different search or category.'}
+          />
+        ) : (
+          <div
+            className={`grid gap-4 transition-opacity duration-150 wide:grid-cols-2 rail:grid-cols-3 ${
+              isLoading ? 'opacity-50' : ''
             }`}
           >
-            <span className="material-symbols-outlined">storefront</span>
-            All Shops
-          </button>
-          {CATEGORIES.map(({ value, label, icon }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setCategory(value)}
-              className={`flex items-center gap-sm px-md py-sm rounded-lg font-body text-body-md font-semibold transition-all active:scale-95 ${
-                category === value
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
-              }`}
-            >
-              <span className="material-symbols-outlined">{icon}</span>
-              {label}
-            </button>
-          ))}
-        </aside>
-
-        {/* Main content: search + grid + load more */}
-        <div className="flex flex-col gap-lg min-w-0">
-          <div className="flex items-center gap-xs bg-surface-container-low px-lg py-sm rounded-full border border-outline-variant">
-            <span className="material-symbols-outlined text-outline">search</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search shops..."
-              className="flex-1 bg-transparent border-none outline-none font-body text-body-md placeholder:text-outline"
-            />
-          </div>
-
-          <div className="flex rounded-lg bg-surface-container-low p-1 gap-1 w-full">
-            {[
-              ['subscribed', 'Your shops'],
-              ['discover', 'Discover more']
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setShopsTab(value)}
-                className={`flex-1 px-lg py-sm rounded-md font-body text-body-sm font-semibold transition-colors ${
-                  shopsTab === value ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'
-                }`}
-              >
-                {label}
-              </button>
+            {visibleStores.map((store) => (
+              <StoreCard
+                key={store._id}
+                store={store}
+                isJoined={joinedStoreIds.has(store._id)}
+                isJoining={joiningStoreId === store._id}
+                onJoin={() => handleJoin(store)}
+              />
             ))}
           </div>
-
-          {!visible ? (
-            <LoadingSpinner />
-          ) : visible.length === 0 ? (
-            <Card className="text-body-sm text-on-surface-variant">
-              {shopsTab === 'subscribed' ? "You haven't joined any shops yet." : 'No shops found.'}
-            </Card>
-          ) : (
-            <>
-              {/* Flex-wrap, not a fixed grid-cols count - however many
-                  fixed-width cards fit the available width flow per row,
-                  same card footprint as the "Featured shops" cards on the
-                  dashboard. Below ~360px a card fills the full row width
-                  (standard mobile single-column pattern) instead of
-                  overflowing or getting clipped. */}
-              <div className="flex flex-wrap justify-center gap-lg">
-                {visible.map((store) => (
-                  <ShopCard
-                    key={store._id}
-                    store={store}
-                    isJoined={joinedIds.has(store._id)}
-                    joining={joiningId === store._id}
-                    onJoin={() => handleJoin(store._id)}
-                    className="w-full max-w-[320px]"
-                  />
-                ))}
-              </div>
-
-              {effectiveVisibleCount < filtered.length && (
-                <Button
-                  variant="text"
-                  className="w-fit self-center !rounded-full border-2 border-primary !text-primary hover:!bg-primary/5 px-xl"
-                  onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                >
-                  <span className="flex items-center gap-sm">
-                    Load more shops
-                    <span className="material-symbols-outlined">expand_more</span>
-                  </span>
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+        )}
+      </ScrollPanel>
+    </ListPage>
   );
-}
+};
+
+export default StoreDirectory;

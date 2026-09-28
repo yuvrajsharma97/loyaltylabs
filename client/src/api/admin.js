@@ -1,36 +1,29 @@
-import client from './client';
+import apiClient from './client';
 
-export async function getMetrics() {
-  const { data } = await client.get('/dashboard/admin/metrics');
-  return data.data;
+export function listStores({ status, search, page, limit } = {}) {
+  return apiClient.get('/dashboard/admin/stores', { params: { status, search, page, limit } });
 }
 
-export async function listStores({ status, limit } = {}) {
-  const { data } = await client.get('/dashboard/admin/stores', { params: { status, limit } });
-  return data.data.stores;
+export function updateStoreStatus(storeId, status) {
+  return apiClient.patch(`/dashboard/admin/stores/${storeId}/status`, { status });
 }
 
-export async function updateStoreStatus(id, status) {
-  const { data } = await client.patch(`/dashboard/admin/stores/${id}/status`, { status });
-  return data.data;
+export function getMetrics() {
+  return apiClient.get('/dashboard/admin/metrics');
 }
 
-export async function listDisputes({ status, limit } = {}) {
-  const { data } = await client.get('/dashboard/admin/disputes', { params: { status, limit } });
-  return data.data.disputes;
+export function listDisputes({ status, page, limit } = {}) {
+  return apiClient.get('/dashboard/admin/disputes', { params: { status, page, limit } });
 }
 
-export async function reconcileStore(id, confirm = false) {
-  const { data } = await client.post(`/dashboard/admin/stores/${id}/reconcile`, { confirm });
-  return data.data;
+export function reconcileStore(storeId, { confirm } = {}) {
+  return apiClient.post(`/dashboard/admin/stores/${storeId}/reconcile`, { confirm });
 }
 
-export async function listCustomers({ search, limit } = {}) {
-  const { data } = await client.get('/dashboard/admin/customers', { params: { search, limit } });
-  return data.data.customers;
+export function listCustomers({ search, page, limit } = {}) {
+  return apiClient.get('/dashboard/admin/customers', { params: { search, page, limit } });
 }
 
-export async function getCustomer(id) {
-  const { data } = await client.get(`/dashboard/admin/customers/${id}`);
-  return data.data;
+export function getCustomer(customerId) {
+  return apiClient.get(`/dashboard/admin/customers/${customerId}`);
 }

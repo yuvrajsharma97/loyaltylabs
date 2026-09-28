@@ -1,160 +1,251 @@
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { listStores } from '../../api/stores';
-import { getTransactions, createDispute } from '../../api/customer';
-import usePaginatedList from '../../shared/hooks/usePaginatedList';
-import { useCustomer } from './CustomerDashboard';
+import { useCallback, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import * as customerApi from '../../api/customer';
+import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
+import { useJoinedStores } from './useJoinedStores';
+import BalanceDisplay from '../../shared/components/BalanceDisplay';
 import Card from '../../shared/components/Card';
+import Avatar from '../../shared/components/Avatar';
+import SkeletonRow from '../../shared/components/SkeletonRow';
+import EmptyState from '../../shared/components/EmptyState';
 import Button from '../../shared/components/Button';
 import Modal from '../../shared/components/Modal';
-import LoadingSpinner from '../../shared/components/LoadingSpinner';
-import { formatDate, formatPoints } from '../../shared/utils/formatters';
+import IconButton from '../../shared/components/IconButton';
+import Icon from '../../shared/components/Icon';
+import { showSuccessToast } from '../../shared/utils/toast';
+import { getTransactionLabel } from '../../shared/utils/labels';
+import { formatDateTime, formatSignedPoints } from '../../shared/utils/formatters';
+import Pagination from '../../shared/components/Pagination';
+import ScrollPanel from '../../shared/components/ScrollPanel';
 
-const TYPE_LABELS = {
-  earn: 'Earned points',
-  redeem: 'Redeemed reward',
-  adjust: 'Balance adjusted',
-  reversal: 'Reversed',
-  expiry: 'Points expired',
-  suspension_reversal: 'Reversed (suspension)'
-};
+const PAGE_SIZE = 10;
 
-// Only these three map to a disputable Dispute.transactionType - 'adjust',
-// 'expiry', and 'suspension_reversal' aren't in that enum on the backend.
-function disputeArgsFor(tx) {
-  if (tx.type === 'earn') return { transactionId: tx._id, transactionType: 'earn' };
-  if (tx.type === 'reversal') return { transactionId: tx._id, transactionType: 'reversal' };
-  if (tx.type === 'redeem' && tx.relatedRedemptionId) {
-    return { transactionId: tx.relatedRedemptionId, transactionType: 'redemption' };
+// Only earn/redeem/reversal ledger entries map onto the dispute schema's
+// three-value transactionType enum - adjust/expiry/suspension_reversal are
+// system-driven entries with no dispute path.
+function getDisputeTarget(transaction) {
+  if (transaction.type === 'earn' || transaction.type === 'reversal') {
+    return { transactionId: transaction._id, transactionType: transaction.type };
+  }
+  if (transaction.type === 'redeem' && transaction.relatedRedemptionId) {
+    return { transactionId: transaction.relatedRedemptionId, transactionType: 'redemption' };
   }
   return null;
 }
 
-export default function Wallet() {
-  const { me } = useCustomer();
-  const [storeNames, setStoreNames] = useState({});
-  const [disputeTx, setDisputeTx] = useState(null);
+// Balance summary: total points plus a per-shop breakdown. On desktop it's a
+// side column (the shop list scrolls if it outgrows the screen); on phones it
+// sits above Activity with the shop list collapsed behind a toggle so the
+// activity list keeps most of the screen.
+const BalanceCard = ({ memberships, totalPoints }) => {
+  const [isShopListOpen, setIsShopListOpen] = useState(false);
+
+  return (
+    <Card className="flex min-h-0 flex-col gap-4 rail:max-h-full">
+      <BalanceDisplay points={totalPoints} />
+
+      <div className="flex min-h-0 flex-1 flex-col border-t border-divider pt-3">
+        <button
+          type="button"
+          onClick={() => setIsShopListOpen((isOpen) => !isOpen)}
+          aria-expanded={isShopListOpen}
+          className="flex items-center justify-between text-label text-text-muted rail:pointer-events-none"
+        >
+          <span>By shop ({memberships.length})</span>
+          <Icon
+            name={isShopListOpen ? 'expand_less' : 'expand_more'}
+            className="rail:hidden"
+            style={{ fontSize: '1.2rem' }}
+          />
+        </button>
+        {memberships.length === 0 ? (
+          <p className="mt-2 text-body-sm text-text-secondary">Join a shop to start earning points.</p>
+        ) : (
+          <ScrollPanel
+            className={`-mx-2 mt-1 max-h-36 rail:block rail:max-h-none rail:flex-1 ${isShopListOpen ? '' : 'hidden'}`}
+          >
+            {memberships.map((membership) => (
+              <Link
+                key={membership._id}
+                to={`/customer/shops/${membership.storeId}`}
+                className="flex items-center gap-3 rounded-button px-2 py-2 transition-colors duration-150 hover:bg-primary-tint"
+              >
+                <Avatar
+                  name={membership.store?.name}
+                  imageUrl={membership.store?.logoUrl}
+                  shape="square"
+                  size="sm"
+                />
+                <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+                  {membership.store?.name || 'Shop no longer listed'}
+                </span>
+                <span className="shrink-0 tabular-nums text-body-sm text-text-secondary">
+                  {membership.pointsBalance.toLocaleString()} pts
+                </span>
+              </Link>
+            ))}
+          </ScrollPanel>
+        )}
+      </div>
+    </Card>
+  );
+};
+
+const TransactionRow = ({ transaction, storeName, onFlag }) => {
+  const disputeTarget = getDisputeTarget(transaction);
+  const isPositive = transaction.points > 0;
+
+  return (
+    <div className="flex items-center gap-3 border-b border-divider py-3 last:border-0">
+      <Avatar name={storeName} shape="square" size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-card-title text-text-primary">{storeName}</p>
+        <p className="truncate text-body-sm text-text-secondary">
+          {getTransactionLabel(transaction.type)} · {formatDateTime(transaction.createdAt)}
+        </p>
+      </div>
+      <span
+        className={`shrink-0 tabular-nums text-body font-semibold ${isPositive ? 'text-success-text' : 'text-error-text'}`}
+      >
+        {formatSignedPoints(transaction.points)}
+      </span>
+      {/* Fixed-width slot so amounts line up whether or not a row can be flagged. */}
+      <div className="flex w-11 shrink-0 justify-center">
+        {disputeTarget && (
+          <IconButton label="Flag this transaction" onClick={() => onFlag({ transaction, disputeTarget })}>
+            <Icon name="flag" style={{ fontSize: '1.2rem' }} />
+          </IconButton>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Wallet = () => {
+  const { joinedStores } = useJoinedStores();
+  const [flaggedTransaction, setFlaggedTransaction] = useState(null);
+
+  const fetchPage = useCallback(
+    (page) =>
+      customerApi
+        .getTransactions({ page, limit: PAGE_SIZE })
+        .then(({ transactions, pagination }) => ({ items: transactions, pagination })),
+    []
+  );
+  const { items: transactions, pagination, setPage, isLoading, error } = usePaginatedList(fetchPage);
+
+  const storeNameById = useMemo(() => {
+    const map = {};
+    joinedStores.forEach((membership) => {
+      if (membership.store) map[membership.storeId] = membership.store.name;
+    });
+    return map;
+  }, [joinedStores]);
+
+  const totalPoints = joinedStores.reduce((sum, membership) => sum + membership.pointsBalance, 0);
+
+  return (
+    <div className="mx-auto flex h-full max-w-5xl flex-col px-4 pb-3 pt-4 rail:pb-6 rail:pt-6">
+      <div className="shrink-0">
+        <h1 className="text-page-title text-text-primary">Wallet</h1>
+        <p className="mt-1 hidden text-body-sm text-text-secondary wide:block">
+          Your points at every shop, and everything that changed them.
+        </p>
+      </div>
+
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 rail:grid rail:grid-cols-[minmax(0,1fr)_320px] rail:grid-rows-[minmax(0,1fr)] rail:gap-6">
+        {/* Sized to its content on desktop, capped at the column height (then the shop list scrolls). */}
+        <aside className="shrink-0 rail:order-last rail:flex rail:min-h-0 rail:flex-col">
+          <BalanceCard memberships={joinedStores} totalPoints={totalPoints} />
+        </aside>
+
+        <section className="flex min-h-48 flex-1 flex-col rail:min-h-0">
+          <h2 className="shrink-0 text-section text-text-primary">Activity</h2>
+          <ScrollPanel
+            resetKey={transactions[0]?._id}
+            className={`mt-3 flex-1 rounded-card border border-border bg-surface px-4 shadow-card transition-opacity duration-150 ${
+              isLoading && transactions.length > 0 ? 'opacity-50' : ''
+            }`}
+          >
+            {isLoading && transactions.length === 0 && (
+              <>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </>
+            )}
+
+            {error && <p className="py-3 text-body-sm text-error-text">{error}</p>}
+
+            {!isLoading && !error && transactions.length === 0 && (
+              <div className="py-4">
+                <EmptyState icon="receipt_long" title="No activity yet" body="Points you earn and spend show up here." />
+              </div>
+            )}
+
+            {transactions.map((transaction) => (
+              <TransactionRow
+                key={transaction._id}
+                transaction={transaction}
+                storeName={storeNameById[transaction.storeId] || 'Shop'}
+                onFlag={setFlaggedTransaction}
+              />
+            ))}
+          </ScrollPanel>
+          <Pagination
+            pagination={pagination}
+            onPageChange={setPage}
+            isDisabled={isLoading}
+            itemLabel="transactions"
+            className="shrink-0 pt-3"
+          />
+        </section>
+      </div>
+
+      <DisputeModal entry={flaggedTransaction} onClose={() => setFlaggedTransaction(null)} />
+    </div>
+  );
+};
+
+const DisputeModal = ({ entry, onClose }) => {
   const [note, setNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    listStores()
-      .then((stores) => {
-        setStoreNames(Object.fromEntries(stores.map((s) => [s._id, s.name])));
-      })
-      .catch(() => {});
-  }, []);
-
-  const { items: transactions, loading, hasMore, loadMore } = usePaginatedList(getTransactions, {
-    itemsKey: 'transactions',
-    limit: 20
-  });
-
-  const handleSubmitDispute = async () => {
-    const args = disputeArgsFor(disputeTx);
-    if (!args) return;
-    if (!note.trim()) {
-      toast.error('Please describe the issue');
-      return;
-    }
-    setSubmitting(true);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
     try {
-      await createDispute({ storeId: disputeTx.storeId, customerNote: note, ...args });
-      toast.success('Dispute submitted');
-      setDisputeTx(null);
+      await customerApi.createDispute({
+        storeId: entry.transaction.storeId,
+        transactionId: entry.disputeTarget.transactionId,
+        transactionType: entry.disputeTarget.transactionType,
+        customerNote: note,
+      });
+      showSuccessToast('Dispute submitted - the shop will take a look.');
       setNote('');
-    } catch (err) {
-      toast.error(err.message || 'Could not submit dispute');
+      onClose();
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-2xl max-w-[1100px] mx-auto">
-      <h1 className="font-display text-display-md-mobile md:text-display-md">Wallet</h1>
-
-      <section className="flex flex-col gap-lg">
-        <h2 className="font-display text-headline-sm">Balances</h2>
-        {me.memberships.length === 0 ? (
-          <Card className="text-body-sm text-on-surface-variant">Join a shop to start earning points.</Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-            {me.memberships.map((m) => (
-              <Card key={m.storeId} hoverable className="flex flex-col gap-xs">
-                <p className="font-body text-body-sm font-semibold text-on-surface-variant">
-                  {storeNames[m.storeId] || 'Shop'}
-                </p>
-                <p className="font-display text-headline-sm text-primary">{m.pointsBalance.toLocaleString()} pts</p>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-lg">
-        <h2 className="font-display text-headline-sm">Transaction history</h2>
-        {transactions.length === 0 && loading ? (
-          <LoadingSpinner />
-        ) : transactions.length === 0 ? (
-          <Card className="text-body-sm text-on-surface-variant">No transactions yet.</Card>
-        ) : (
-          <>
-            <Card className="divide-y divide-outline-variant !p-0">
-              {transactions.map((tx) => (
-                <div key={tx._id} className="flex items-center justify-between px-xl py-lg gap-md">
-                  <div className="min-w-0">
-                    <p className="font-body text-body-md font-semibold">{TYPE_LABELS[tx.type] || tx.type}</p>
-                    <p className="text-body-sm text-on-surface-variant truncate">
-                      {storeNames[tx.storeId] || 'Shop'} &middot; {formatDate(tx.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-md shrink-0">
-                    <p className={`font-mono font-bold ${tx.points >= 0 ? 'text-tertiary' : 'text-error'}`}>
-                      {formatPoints(tx.points)} pts
-                    </p>
-                    {disputeArgsFor(tx) && (
-                      <button
-                        type="button"
-                        onClick={() => setDisputeTx(tx)}
-                        aria-label="Flag this transaction"
-                        className="text-on-surface-variant hover:text-error transition-colors"
-                      >
-                        <span className="material-symbols-outlined">flag</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </Card>
-            {hasMore && (
-              <Button variant="text" onClick={loadMore} loading={loading} className="w-fit self-center px-xl">
-                Load more
-              </Button>
-            )}
-          </>
-        )}
-      </section>
-
-      <Modal
-        open={Boolean(disputeTx)}
-        title="Flag this transaction"
-        confirmText="Submit"
-        confirming={submitting}
-        onConfirm={handleSubmitDispute}
-        onCancel={() => {
-          setDisputeTx(null);
-          setNote('');
-        }}
-      >
+    <Modal isOpen={Boolean(entry)} onClose={onClose} title="Flag this transaction">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <textarea
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(event) => setNote(event.target.value)}
           placeholder="What went wrong?"
           rows={4}
-          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-md font-body text-body-md placeholder:text-outline outline-none focus:border-primary transition-all"
+          required
+          className="rounded-input border border-border bg-surface p-3 text-body text-text-primary outline-none focus:border-primary"
         />
-      </Modal>
-    </div>
+        <Button type="submit" isLoading={isSubmitting}>
+          Submit
+        </Button>
+      </form>
+    </Modal>
   );
-}
+};
+
+export default Wallet;

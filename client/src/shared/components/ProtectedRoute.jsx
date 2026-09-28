@@ -1,15 +1,23 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import LoadingSpinner from './LoadingSpinner';
 
-export default function ProtectedRoute({ role, redirectTo = '/sign-in', children }) {
-  const { isAuthenticated, role: currentRole } = useAuth();
+const ProtectedRoute = ({ role, children }) => {
+  const { isAuthenticated, isLoading, role: currentRole } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner className="h-screen" />;
+  }
 
   if (!isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to="/sign-in" replace />;
   }
+
   if (role && currentRole !== role) {
     return <Navigate to="/" replace />;
   }
 
   return children;
-}
+};
+
+export default ProtectedRoute;

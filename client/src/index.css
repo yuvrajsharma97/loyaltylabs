@@ -1,110 +1,203 @@
 @import 'tailwindcss';
 @import './styles/tokens.css';
 
-/* Class-based dark mode (toggled by adding .dark to <html>), matching the
-   design mockups' approach, instead of Tailwind's default OS-preference-only strategy. */
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
-  /* Colors - indirected through tokens.css custom properties so a single
-     .dark class swap changes every utility class at once. */
+  /* Colors */
+  --color-canvas: var(--color-canvas);
   --color-surface: var(--color-surface);
-  --color-surface-dim: var(--color-surface-dim);
-  --color-surface-bright: var(--color-surface-bright);
-  --color-surface-container-lowest: var(--color-surface-container-lowest);
-  --color-surface-container-low: var(--color-surface-container-low);
-  --color-surface-container: var(--color-surface-container);
-  --color-surface-container-high: var(--color-surface-container-high);
-  --color-surface-container-highest: var(--color-surface-container-highest);
-  --color-on-surface: var(--color-on-surface);
-  --color-on-surface-variant: var(--color-on-surface-variant);
-  --color-inverse-surface: var(--color-inverse-surface);
-  --color-inverse-on-surface: var(--color-inverse-on-surface);
-  --color-outline: var(--color-outline);
-  --color-outline-variant: var(--color-outline-variant);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-disabled: var(--color-surface-disabled);
+
   --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-pressed: var(--color-primary-pressed);
+  --color-primary-tint: var(--color-primary-tint);
   --color-on-primary: var(--color-on-primary);
-  --color-primary-container: var(--color-primary-container);
-  --color-on-primary-container: var(--color-on-primary-container);
-  --color-inverse-primary: var(--color-inverse-primary);
-  --color-secondary: var(--color-secondary);
-  --color-on-secondary: var(--color-on-secondary);
-  --color-secondary-container: var(--color-secondary-container);
-  --color-on-secondary-container: var(--color-on-secondary-container);
-  --color-tertiary: var(--color-tertiary);
-  --color-on-tertiary: var(--color-on-tertiary);
-  --color-tertiary-container: var(--color-tertiary-container);
-  --color-on-tertiary-container: var(--color-on-tertiary-container);
+
+  --color-accent: var(--color-accent);
+  --color-accent-text: var(--color-accent-text);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-disabled: var(--color-text-disabled);
+
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-divider: var(--color-divider);
+
+  --color-success: var(--color-success);
+  --color-success-text: var(--color-success-text);
+  --color-success-bg: var(--color-success-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-text: var(--color-warning-text);
+  --color-warning-bg: var(--color-warning-bg);
   --color-error: var(--color-error);
-  --color-on-error: var(--color-on-error);
-  --color-error-container: var(--color-error-container);
-  --color-on-error-container: var(--color-on-error-container);
-  --color-background: var(--color-background);
-  --color-on-background: var(--color-on-background);
-  --color-surface-variant: var(--color-surface-variant);
+  --color-error-text: var(--color-error-text);
+  --color-error-bg: var(--color-error-bg);
+  --color-info: var(--color-info);
+  --color-info-text: var(--color-info-text);
+  --color-info-bg: var(--color-info-bg);
 
-  /* Typography - one shared type scale across both themes. */
-  --font-display: 'Plus Jakarta Sans', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'Geist', monospace;
+  /* Type */
+  --font-display: 'Geist', system-ui, sans-serif;
+  --font-body: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 
-  --text-display-lg: 40px;
-  --text-display-lg--line-height: 48px;
-  --text-display-lg--letter-spacing: -0.02em;
-  --text-display-lg--font-weight: 700;
+  --text-display: 32px;
+  --text-display--line-height: 36px;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 600;
 
-  --text-display-lg-mobile: 32px;
-  --text-display-lg-mobile--line-height: 40px;
-  --text-display-lg-mobile--font-weight: 700;
+  --text-page-title: 24px;
+  --text-page-title--line-height: 30px;
+  --text-page-title--letter-spacing: -0.02em;
+  --text-page-title--font-weight: 600;
 
-  --text-display-md: 32px;
-  --text-display-md--line-height: 40px;
-  --text-display-md--letter-spacing: -0.01em;
-  --text-display-md--font-weight: 700;
+  --text-section: 18px;
+  --text-section--line-height: 24px;
+  --text-section--font-weight: 600;
 
-  --text-display-md-mobile: 24px;
-  --text-display-md-mobile--line-height: 32px;
-  --text-display-md-mobile--font-weight: 700;
+  --text-card-title: 16px;
+  --text-card-title--line-height: 20px;
+  --text-card-title--font-weight: 600;
 
-  --text-headline-sm: 24px;
-  --text-headline-sm--line-height: 32px;
-  --text-headline-sm--font-weight: 700;
+  --text-body: 15px;
+  --text-body--line-height: 23px;
 
-  --text-body-lg: 18px;
-  --text-body-lg--line-height: 28px;
-  --text-body-lg--font-weight: 400;
-
-  --text-body-md: 16px;
-  --text-body-md--line-height: 24px;
-  --text-body-md--font-weight: 400;
-
-  --text-body-sm: 14px;
+  --text-body-sm: 13.5px;
   --text-body-sm--line-height: 20px;
-  --text-body-sm--font-weight: 500;
 
-  --text-label-mono: 12px;
-  --text-label-mono--line-height: 16px;
-  --text-label-mono--letter-spacing: 0.05em;
-  --text-label-mono--font-weight: 600;
+  --text-label: 13px;
+  --text-label--line-height: 16px;
+  --text-label--font-weight: 500;
 
-  /* Named spacing scale, matching the design system's tokens exactly (also
-     happens to line up with Tailwind's default numeric scale at 4px/unit). */
-  --spacing-base: 4px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-2xl: 32px;
-  --spacing-3xl: 48px;
-  --spacing-container-margin: 20px;
-  --spacing-gutter: 16px;
+  --text-caption-mono: 11.5px;
+  --text-caption-mono--line-height: 16px;
+  --text-caption-mono--letter-spacing: 0.1em;
+  --text-caption-mono--font-weight: 500;
+
+  --text-amount: 20px;
+  --text-amount--line-height: 24px;
+  --text-amount--font-weight: 600;
+
+  /* Radius */
+  --radius-input: var(--radius-input);
+  --radius-button: var(--radius-button);
+  --radius-card: var(--radius-card);
+  --radius-sheet: var(--radius-sheet);
+  --radius-pill: var(--radius-pill);
+
+  /* Shadow */
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-sheet: var(--shadow-sheet);
+  --shadow-dialog: var(--shadow-dialog);
+
+  /* Breakpoints - match Design Foundations' responsive rule exactly:
+     width buys density/nav position, never bigger type or whitespace. */
+  --breakpoint-wide: 600px;
+  --breakpoint-rail: 960px;
+  --breakpoint-console: 1280px;
 }
 
 body {
   margin: 0;
-  background-color: var(--color-background);
-  color: var(--color-on-surface);
+  background-color: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
+
+/* Numeric values (money, points, timestamps) always read as tabular
+   figures so columns of numbers line up. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tailwind's preflight resets <button> to cursor:default - restore the
+   pointer cursor everywhere so every button reads as clickable. */
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Themed focus ring everywhere - never the browser default blue ring. Kept in
+   the base layer so a component's own `outline-none` (inputs that show focus
+   via their border instead) can override it; unlayered CSS would always win
+   over Tailwind utilities. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+}
+/* Nav items sit flush against the bottom bar / rail edge - an outward ring
+   would get clipped, so it draws inward instead. */
+.nav-item:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Glass recipes - chrome and overlay only. Never on balance/amount
+   surfaces, transaction rows, inputs, or primary buttons. Each falls back
+   to a flat, opaque background when backdrop-filter isn't supported. */
+.glass-chrome {
+  background: var(--glass-chrome-bg);
+  backdrop-filter: var(--glass-chrome-blur);
+  -webkit-backdrop-filter: var(--glass-chrome-blur);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-chrome {
+    background: var(--color-canvas);
+  }
+}
+
+.glass-overlay {
+  background: var(--glass-overlay-bg);
+  backdrop-filter: var(--glass-overlay-blur);
+  -webkit-backdrop-filter: var(--glass-overlay-blur);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-overlay {
+    background: var(--color-surface);
+  }
+}
+
+.glass-scrim {
+  background: var(--glass-scrim-bg);
+  backdrop-filter: var(--glass-scrim-blur);
+  -webkit-backdrop-filter: var(--glass-scrim-blur);
+}
+
+.glass-pill {
+  background: var(--glass-pill-bg);
+  backdrop-filter: var(--glass-pill-blur);
+  -webkit-backdrop-filter: var(--glass-pill-blur);
+}
+
+/* Landing page marketing cards only - see the note on the recipes above,
+   this is a separate, more transparent recipe for cards over the landing
+   page's decorative glow (LandingPage.jsx's GlowBackdrop). */
+.glass-card {
+  background: var(--glass-card-bg);
+  border: 1px solid var(--glass-card-border);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+}
+.glass-card-tint {
+  background: var(--glass-card-tint-bg);
+  border: 1px solid var(--glass-card-tint-border);
+  backdrop-filter: var(--glass-card-blur);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-card {
+    background: var(--color-surface);
+  }
+  .glass-card-tint {
+    background: var(--color-primary-tint);
+  }
 }
 
 .material-symbols-outlined {
@@ -114,44 +207,145 @@ body {
     'GRAD' 0,
     'opsz' 24;
 }
-
-/* Tailwind's preflight resets <button> to cursor:default - restore the
-   pointer cursor everywhere so every button in the app reads as clickable. */
-button:not(:disabled) {
-  cursor: pointer;
-}
-button:disabled {
-  cursor: not-allowed;
+.material-symbols-outlined.filled {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 300,
+    'GRAD' 0,
+    'opsz' 24;
 }
 
-/* Elevation tokens from the design mockups - swap between them on hover so
-   cards feel like they lift off the page instead of just tinting. */
-.elevation-l1 {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+/* Landing page hero - the reward-token pulse that appears over the video
+   at a fixed point in playback (see Hero in LandingPage.jsx). */
+@keyframes tokenRise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.62);
+  }
+  16% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.03);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1);
+  }
+  68% {
+    opacity: 1;
+    transform: translateY(-26px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.98);
+  }
 }
-.elevation-l2 {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+@keyframes cupPulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.45);
+  }
+  70% {
+    opacity: 0.12;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
 }
 
-/* A black-tinted shadow is invisible against dark surfaces - swap to a light
-   tint in dark mode so elevation still reads. Tailwind's own shadow-sm/md/lg
-   utilities (including hover: variants) all resolve through the single
-   --tw-shadow-color custom property below (inherited from <html class="dark">),
-   so this one override covers every one of them app-wide with no per-component
-   changes; elevation-l1/l2 are outside Tailwind's utility pipeline and need
-   their own explicit override. */
-.dark {
-  --tw-shadow-color: #ffffff1a;
+/* Landing page hero - floating reward-card mockups and nav dropdown, see
+   Hero.jsx. */
+@keyframes float-left {
+  0%,
+  100% {
+    transform: rotate(-13deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-10deg) translateY(-20px);
+  }
 }
-.dark .elevation-l1 {
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.06);
+@keyframes float-center {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(0.5deg);
+  }
 }
-.dark .elevation-l2 {
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+@keyframes float-right {
+  0%,
+  100% {
+    transform: rotate(13deg) translateY(0);
+  }
+  50% {
+    transform: rotate(10deg) translateY(-22px);
+  }
+}
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  60%,
+  100% {
+    transform: translateX(320%) skewX(-18deg);
+  }
+}
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
-/* Empty loyalty-stamp slot - a faint ring instead of a filled circle. */
-.stamp-slot {
-  background-image: radial-gradient(circle, transparent 70%, var(--color-surface-container-high) 72%);
-  background-size: 100% 100%;
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-disabled) 25%,
+    var(--color-divider) 37%,
+    var(--color-surface-disabled) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+/* Empty loyalty-stamp slot - a faint dashed ring instead of a filled dot. */
+.stamp-slot-empty {
+  border: 1.5px dashed var(--color-border-strong);
+}
+
+/* Thin, token-coloured scrollbar for in-page scroll areas (ScrollPanel) -
+   the chunky OS default looks out of place inside cards. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
 }

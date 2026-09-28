@@ -1,13 +1,16 @@
-export default function Card({ className = '', hoverable = false, children, ...props }) {
-  const hoverClasses = hoverable
-    ? 'elevation-l1 hover:elevation-l2 hover:scale-[1.015] transition-all duration-300'
-    : 'shadow-sm';
+const Card = ({ isInteractive = false, className = '', children, ...props }) => {
+  const interactiveClasses = isInteractive
+    ? 'transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-lift cursor-pointer'
+    : '';
+
   return (
     <div
-      className={`bg-surface-container-lowest border border-outline-variant p-xl rounded-xl ${hoverClasses} ${className}`}
+      className={`rounded-card border border-border bg-surface p-4 shadow-card ${interactiveClasses} ${className}`}
       {...props}
     >
       {children}
     </div>
   );
-}
+};
+
+export default Card;

@@ -1,45 +1,56 @@
 import { useCallback, useEffect, useState } from 'react';
 
-// Wraps any cursor-paginated fetchFn({limit, before, ...extraParams}) that
-// returns {[itemsKey]: [...], nextCursor} - used by both the customer's and
-// the store owner's transaction history screens.
-export default function usePaginatedList(fetchFn, { itemsKey, limit = 20, params = {} } = {}) {
+// Page-number pagination shared by every list screen. fetchPage(page) must
+// resolve to { items, pagination } where pagination is the API's
+// { page, limit, total, totalPages, hasNextPage, hasPrevPage }.
+//
+// Pass a fetchPage wrapped in useCallback: when its identity changes (a
+// filter or search changed) the list jumps back to page 1.
+export function usePaginatedList(fetchPage) {
+  const [page, setPage] = useState(1);
   const [items, setItems] = useState([]);
-  const [cursor, setCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const paramsKey = JSON.stringify(params);
-
-  const load = useCallback(
-    async (before) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await fetchFn({ limit, before, ...params });
-        setItems((prev) => (before ? [...prev, ...result[itemsKey]] : result[itemsKey]));
-        setCursor(result.nextCursor);
-        setHasMore(Boolean(result.nextCursor));
-      } catch (err) {
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fetchFn, itemsKey, limit, paramsKey]
-  );
+  // Reset to page 1 when the filters change - adjusted during render (React's
+  // documented pattern) so the stale page is never fetched with new filters.
+  const [prevFetchPage, setPrevFetchPage] = useState(() => fetchPage);
+  if (prevFetchPage !== fetchPage) {
+    setPrevFetchPage(() => fetchPage);
+    setPage(1);
+  }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paramsKey]);
+    let isCancelled = false;
+    setIsLoading(true);
+    setError(null);
 
-  const loadMore = () => {
-    if (!loading && hasMore) load(cursor);
-  };
+    fetchPage(page)
+      .then((result) => {
+        if (isCancelled) return;
+        // The last item on the last page was removed (e.g. a delete) - step back a page.
+        if (result.items.length === 0 && page > 1 && page > result.pagination.totalPages) {
+          setPage(result.pagination.totalPages);
+          return;
+        }
+        setItems(result.items);
+        setPagination(result.pagination);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        setError(err.message || 'Unable to load. Please try again.');
+        setIsLoading(false);
+      });
 
-  return { items, loading, hasMore, error, loadMore };
+    return () => {
+      isCancelled = true;
+    };
+  }, [fetchPage, page, reloadKey]);
+
+  const reload = useCallback(() => setReloadKey((key) => key + 1), []);
+
+  return { items, pagination, page, setPage, isLoading, error, reload };
 }

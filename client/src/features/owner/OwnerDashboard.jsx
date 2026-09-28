@@ -1,86 +1,94 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { getMyStore } from '../../api/storeOwner';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import * as storesApi from '../../api/stores';
 import { useAuth } from '../../shared/hooks/useAuth';
-import DashboardShell from '../../shared/components/DashboardShell';
+import KpiTile from '../../shared/components/KpiTile';
+import Card from '../../shared/components/Card';
+import Button from '../../shared/components/Button';
+import Icon from '../../shared/components/Icon';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
-import Analytics from './Analytics';
-import RewardEditor from './RewardEditor';
-import OwnerTransactionHistory from './OwnerTransactionHistory';
-import DisputesPanel from './DisputesPanel';
-import Settings from './Settings';
-import TillHome from './till/TillHome';
+import EmptyState from '../../shared/components/EmptyState';
+import OnboardingChecklist from './OnboardingChecklist';
 
-const StoreContext = createContext(null);
-
-export function useStore() {
-  const ctx = useContext(StoreContext);
-  if (!ctx) throw new Error('useStore must be used within OwnerDashboard');
-  return ctx;
-}
-
-const NAV_ITEMS = [
-  { to: '/store', icon: 'analytics', label: 'Overview', end: true },
-  { to: '/store/rewards', icon: 'redeem', label: 'Rewards' },
-  { to: '/store/till', icon: 'point_of_sale', label: 'Till' },
-  { to: '/store/transactions', icon: 'receipt_long', label: 'Transactions' },
-  { to: '/store/disputes', icon: 'flag', label: 'Disputes' },
-  { to: '/store/settings', icon: 'settings', label: 'Settings' }
-];
-
-export default function OwnerDashboard() {
-  const { logout } = useAuth();
-  const [store, setStore] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = useCallback(async () => {
-    try {
-      const data = await getMyStore();
-      setStore(data);
-    } catch (err) {
-      toast.error(err.message || 'Could not load your store');
-    }
-  }, []);
+const OwnerDashboard = () => {
+  const { user: store, refreshProfile } = useAuth();
+  const [analytics, setAnalytics] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getMyStore()
-      .then(setStore)
-      .catch((err) => toast.error(err.message || 'Could not load your store'))
-      .finally(() => setLoading(false));
-  }, []);
+    // Onboarding flags change elsewhere (e.g. a first till scan), so refresh
+    // the store profile whenever the overview is opened.
+    refreshProfile();
+    storesApi
+      .getStoreAnalytics(store._id)
+      .then(setAnalytics)
+      .finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store._id]);
 
-  if (loading || !store) {
-    return <LoadingSpinner fullScreen />;
+  if (isLoading) {
+    return <LoadingSpinner className="py-16" />;
   }
 
   return (
-    <StoreContext.Provider value={{ store, refetch }}>
-      <DashboardShell
-        brandTitle={store.name}
-        brandSubtitle="Store dashboard"
-        navItems={NAV_ITEMS}
-        footer={
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-md px-md py-sm w-full text-on-surface-variant hover:text-error transition-colors"
-          >
-            <span className="material-symbols-outlined">logout</span>
-            Log out
-          </button>
-        }
-      >
-        <Routes>
-          <Route index element={<Analytics />} />
-          <Route path="rewards" element={<RewardEditor />} />
-          <Route path="till/*" element={<TillHome />} />
-          <Route path="transactions" element={<OwnerTransactionHistory />} />
-          <Route path="disputes" element={<DisputesPanel />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/store" replace />} />
-        </Routes>
-      </DashboardShell>
-    </StoreContext.Provider>
+    <div className="mx-auto max-w-4xl px-4 py-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-page-title text-text-primary">Overview</h1>
+          <p className="mt-1 text-body-sm text-text-secondary">What&apos;s happened at {store.name}.</p>
+        </div>
+        <Link to="/store/till">
+          <Button size="sm">
+            <Icon name="point_of_sale" style={{ fontSize: '1.1rem' }} />
+            Open till
+          </Button>
+        </Link>
+      </div>
+
+      {store.status === 'suspended' && (
+        <Card className="mt-5 flex items-start gap-3 border-error bg-error-bg">
+          <Icon name="block" className="text-error" />
+          <p className="text-body-sm text-error-text">
+            This store is suspended. Customers can&apos;t earn or redeem points here until it&apos;s reactivated - contact support.
+          </p>
+        </Card>
+      )}
+
+      <div className="mt-5">
+        <OnboardingChecklist onboarding={store.onboardingCompleted} />
+      </div>
+
+      {analytics && (
+        <>
+          <div className="mt-5 grid grid-cols-2 gap-3 rail:grid-cols-3">
+            <KpiTile label="Visits" value={analytics.totalVisits.toLocaleString()} />
+            <KpiTile label="Redemptions" value={analytics.totalRedemptions.toLocaleString()} />
+            <KpiTile label="Fulfilment rate" value={`${Math.round(analytics.redemptionRate * 100)}%`} />
+            <KpiTile label="Points issued" value={analytics.totalPointsIssued.toLocaleString()} />
+            <KpiTile label="Points redeemed" value={analytics.totalPointsRedeemed.toLocaleString()} />
+            <KpiTile label="Fulfilled" value={analytics.fulfilledRedemptions.toLocaleString()} />
+          </div>
+
+          <h2 className="mt-6 text-label text-text-muted">Top rewards</h2>
+          <Card className="mt-2">
+            {analytics.topRewards.length === 0 && <EmptyState icon="redeem" title="No redemptions yet" />}
+            {analytics.topRewards.map((reward, index) => (
+              <div
+                key={reward.rewardId}
+                className="flex items-center gap-3 border-b border-divider py-2.5 last:border-0"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-tint tabular-nums text-label text-primary">
+                  {index + 1}
+                </span>
+                <span className="flex-1 text-body text-text-primary">{reward.title}</span>
+                <span className="tabular-nums text-body-sm text-text-secondary">{reward.count} redeemed</span>
+              </div>
+            ))}
+          </Card>
+        </>
+      )}
+    </div>
   );
-}
+};
+
+export default OwnerDashboard;

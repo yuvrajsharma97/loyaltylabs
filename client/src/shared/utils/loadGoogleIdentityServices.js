@@ -1,20 +1,22 @@
-// Lazily injects Google Identity Services (only the sign-in page needs it,
-// so it's not worth a static <script> tag in index.html on every page load).
-// Cached as a module-level promise so concurrent/repeat callers share one
-// script tag and one load instead of racing to inject it multiple times.
 let loadPromise = null;
 
+// Loads the Google Identity Services script once and reuses the same
+// promise for every caller, however many sign-in buttons end up mounted.
 export function loadGoogleIdentityServices() {
-  if (window.google?.accounts?.id) return Promise.resolve(window.google);
   if (loadPromise) return loadPromise;
 
   loadPromise = new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) {
+      resolve(window.google);
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => resolve(window.google);
-    script.onerror = () => reject(new Error('Could not load Google sign-in'));
+    script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
     document.head.appendChild(script);
   });
 

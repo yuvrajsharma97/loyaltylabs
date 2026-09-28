@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDF1F3;color:#1C1F16;font-family:Geist,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2B5748;text-decoration:none}
+a:hover{color:#1C3A2E;text-decoration:underline}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div style="padding:48px 44px 120px;display:flex;flex-direction:column;gap:36px;width:max-content;min-width:100%">
+
+<header style="display:flex;flex-direction:column;gap:14px;max-width:820px">
+<span style="font:500 12px/1 'Geist Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#6E7679">Console · platform admin · v0.1</span>
+<h1 style="margin:0;font:600 38px/1.08 Geist,sans-serif;letter-spacing:-.028em">Admin dashboard</h1>
+<p style="margin:0;font:400 16px/1.6 Geist,sans-serif;color:#4E5346;text-wrap:pretty">Platform view across every store: growth, the approval queue, the store register and system health. Same tokens, charts and confirmation patterns as the owner console — admin is denser and its destructive actions cost more, so rejecting an application requires typing the word.</p>
+</header>
+
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Mobile · 390 · on call</span>
+<div style="width:390px;height:840px;box-sizing:border-box;border:1px solid #C9D1D4;border-radius:26px;background:#F5F7F8;overflow:hidden;position:relative;display:flex;flex-direction:column">
+
+<div style="position:absolute;top:0;left:0;right:0;z-index:3;padding:14px 16px 12px;border-bottom:1px solid #E1E6E8;display:flex;align-items:center;justify-content:space-between;gap:12px;{{ chromeGlass }}">
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">{{ platformName }} · admin</span>
+<span style="font:600 20px/1.2 Geist,sans-serif;letter-spacing:-.015em">{{ screenTitle }}</span>
+</div>
+<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+<span style="display:inline-flex;align-items:center;gap:6px;flex:none;background:#FFF78D;color:#3F3A08;border-radius:999px;padding:7px 11px;font:500 12px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ pendingCount }} to review</span>
+</sc-if>
+</div>
+
+<div style="flex:1;overflow-y:auto;padding:80px 16px 96px;display:flex;flex-direction:column;gap:12px">
+
+<sc-if value="{{ isStats }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:14px;display:flex;flex-direction:column;gap:7px;min-width:0">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ k.label }}</span>
+<span style="font:600 25px/1 Geist,sans-serif;letter-spacing:-.025em;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+<span style="display:flex;align-items:center;gap:5px;font:500 12px/1 Geist,sans-serif;font-variant-numeric:tabular-nums;color:{{ k.color }}"><span style="{{ k.arrowStyle }}"></span>{{ k.delta }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 15px/1.2 Geist,sans-serif">New stores</span><span style="font:400 12.5px/1 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">142 added this year</span></div>
+<span style="font:500 11.5px/1 'Geist Mono',monospace;padding:6px 9px;border-radius:999px;background:#EBE3A7;color:#5A5410;white-space:nowrap">8 months</span>
+</div>
+<div style="display:flex;align-items:flex-end;gap:7px;padding-top:4px">
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="8">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px">
+<span style="font:500 10.5px/1 'Geist Mono',monospace;color:#6E7679;font-variant-numeric:tabular-nums">{{ m.value }}</span>
+<span style="width:100%;height:92px;display:flex;align-items:flex-end"><span style="width:100%;flex:none;border-radius:5px 5px 0 0;height:{{ m.h }};background:{{ m.fill }}"></span></span>
+<span style="font:500 10.5px/1 Geist,sans-serif;color:{{ m.labelColor }}">{{ m.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="font:600 15px/1.2 Geist,sans-serif">Points across the platform</span><span style="font:400 12px/1 'Geist Mono',monospace;color:#6E7679">30 days</span></div>
+<svg viewBox="0 0 320 120" width="100%" height="120" preserveAspectRatio="none" aria-label="Points issued versus redeemed across the platform" data-om-raster="true">
+<line x1="0" y1="30" x2="320" y2="30" stroke="#EDF0F2" stroke-width="1"></line>
+<line x1="0" y1="60" x2="320" y2="60" stroke="#EDF0F2" stroke-width="1"></line>
+<line x1="0" y1="90" x2="320" y2="90" stroke="#EDF0F2" stroke-width="1"></line>
+<path d="{{ issuedArea }}" fill="#E4EDEA"></path>
+<path d="{{ issuedLine }}" fill="none" stroke="#2B5748" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+<path d="{{ redeemedLine }}" fill="none" stroke="#B79A00" stroke-width="2" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" stroke-linejoin="round" stroke-linecap="round"></path>
+</svg>
+<div style="display:flex;gap:16px">
+<span style="display:flex;align-items:center;gap:7px;font:400 12.5px/1 Geist,sans-serif;color:#4E5346"><span style="width:14px;height:3px;border-radius:2px;background:#2B5748"></span>Issued 1.24M</span>
+<span style="display:flex;align-items:center;gap:7px;font:400 12.5px/1 Geist,sans-serif;color:#4E5346"><span style="width:14px;height:3px;border-radius:2px;background:#B79A00"></span>Redeemed 508k</span>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:13px">
+<span style="font:600 15px/1.2 Geist,sans-serif">Stores by plan</span>
+<sc-for list="{{ plans }}" as="pl" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font:400 13.5px/1 Geist,sans-serif;color:#4E5346"><span>{{ pl.name }}</span><span style="font-weight:500;color:#1C1F16;font-variant-numeric:tabular-nums">{{ pl.count }}</span></div>
+<span style="height:8px;border-radius:999px;background:#EDF0F2;overflow:hidden;display:block"><span style="display:block;height:8px;border-radius:999px;background:{{ pl.fill }};width:{{ pl.w }}"></span></span>
+<span style="font:400 12px/1 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">{{ pl.share }} of stores · {{ pl.mrr }} MRR</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStores }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="height:44px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="4.6" stroke="#6E7679" stroke-width="1.4"/><path d="M11.5 11.5L15 15" stroke="#6E7679" stroke-width="1.4" stroke-linecap="round"/></svg><span style="font:400 14.5px/1 Geist,sans-serif;color:#8A9195">Search 412 stores</span></span>
+<div style="display:flex;gap:7px">
+<sc-for list="{{ storeFilters }}" as="f" hint-placeholder-count="3">
+<button type="button" onClick="{{ f.select }}" style="{{ f.style }}">{{ f.label }}</button>
+</sc-for>
+</div>
+<sc-for list="{{ stores }}" as="s" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:13px;transition:border-color .16s ease,box-shadow .16s ease" style-hover="border-color:#CBD3D6;box-shadow:0 6px 16px -10px rgba(28,31,22,.2)">
+<div style="display:flex;align-items:flex-start;gap:12px">
+<span style="width:38px;height:38px;flex:none;border-radius:9px;background:#EBE3A7;display:flex;align-items:center;justify-content:center;font:600 13px Geist,sans-serif;color:#5A5410">{{ s.initials }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 15.5px/1.25 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span>
+<span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">{{ s.meta }}</span>
+</div>
+<span style="{{ s.pillStyle }}">{{ s.pillLabel }}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding-top:2px;border-top:1px solid #EDF0F2">
+<div style="display:flex;flex-direction:column;gap:2px;padding-top:11px"><span style="font:400 11px/1 'Geist Mono',monospace;color:#6E7679">CUSTOMERS</span><span style="font:600 15px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.customers }}</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding-top:11px"><span style="font:400 11px/1 'Geist Mono',monospace;color:#6E7679">ISSUED</span><span style="font:600 15px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.issued }}</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding-top:11px"><span style="font:400 11px/1 'Geist Mono',monospace;color:#6E7679">LIABILITY</span><span style="font:600 15px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.liability }}</span></div>
+</div>
+<div style="display:flex;gap:9px">
+<button type="button" style="flex:1;height:44px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;color:#4E5346;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease" style-hover="background:#F5F7F8" style-focus="outline:2px solid #2B5748;outline-offset:2px">Open store</button>
+<button type="button" onClick="{{ s.suspend }}" style="{{ s.suspendStyle }}" style-focus="outline:2px solid #2B5748;outline-offset:2px">{{ s.suspendLabel }}</button>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApprovals }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+<div style="background:#EBE3A7;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+<span style="width:34px;height:34px;flex:none;border-radius:8px;background:rgba(90,84,16,.14);display:flex;align-items:center;justify-content:center;font:600 14px Geist,sans-serif;color:#3F3A08;font-variant-numeric:tabular-nums">{{ pendingCount }}</span>
+<span style="flex:1;font:400 13.5px/1.45 Geist,sans-serif;color:#3F3A08">Applications waiting. Median wait 6 hours — the target is under 24.</span>
+</div>
+</sc-if>
+<sc-for list="{{ pending }}" as="a" hint-placeholder-count="3">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:flex-start;gap:12px">
+<span style="width:38px;height:38px;flex:none;border-radius:9px;background:#F5F7F8;border:1px solid #E1E6E8;display:flex;align-items:center;justify-content:center;font:500 12.5px 'Geist Mono',monospace;color:#4E5346">{{ a.initials }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 15.5px/1.25 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
+<span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">{{ a.meta }}</span>
+</div>
+</div>
+<div style="background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ a.checks }}" as="c" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;font:400 13px/1 Geist,sans-serif;color:#4E5346"><span style="{{ c.dot }}"></span>{{ c.label }}</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:9px">
+<button type="button" onClick="{{ a.approve }}" style="flex:1;height:44px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease,transform .12s ease" style-hover="background:#234739" style-active="background:#1C3A2E;transform:scale(.99)" style-focus="outline:2px solid #2B5748;outline-offset:2px">Approve</button>
+<button type="button" onClick="{{ a.reject }}" style="flex:none;height:44px;padding:0 16px;border:1px solid #E0B6AE;border-radius:8px;background:#fff;color:#96271A;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease" style-hover="background:#F8E5E1" style-focus="outline:2px solid #96271A;outline-offset:2px">Reject</button>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ queueEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px dashed #CBD3D6;border-radius:12px;padding:30px 18px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center">
+<span style="width:44px;height:44px;border-radius:50%;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<span style="font:600 15.5px/1.3 Geist,sans-serif">Queue clear</span>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#6E7679;max-width:30ch">Every application has been reviewed. New ones appear here within a minute of submission.</span>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHealth }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:16px;display:flex;align-items:center;gap:12px">
+<span style="width:38px;height:38px;flex:none;border-radius:9px;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:600 15.5px/1.25 Geist,sans-serif">All systems normal</span><span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">checked 40s ago</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{ health }}" as="h" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.label }}</span>
+<span style="font:600 22px/1 Geist,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ h.value }}</span>
+<span style="{{ h.noteStyle }}">{{ h.note }}</span>
+</div>
+</sc-for>
+</div>
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<div style="padding:14px 16px 10px"><span style="font:600 15px/1 Geist,sans-serif">Recent incidents</span></div>
+<sc-for list="{{ incidents }}" as="i" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #EDF0F2;min-height:48px">
+<span style="{{ i.dot }}"></span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font:500 14px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ i.title }}</span>
+<span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">{{ i.meta }}</span>
+</div>
+<span style="{{ i.pillStyle }}">{{ i.status }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<div style="position:absolute;bottom:0;left:0;right:0;z-index:3;border-top:1px solid #E1E6E8;padding:6px 8px 10px;display:flex;gap:2px;{{ chromeGlass }}">
+<button type="button" onClick="{{ goStats }}" style="{{ mStats }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 15V9M8 15V5M12 15v-4M16 15V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Stats</span></button>
+<button type="button" onClick="{{ goStores }}" style="{{ mStores }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 8.5h12V16H4zM4 8.5L5.6 4.5h8.8L16 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Stores</span></button>
+<button type="button" onClick="{{ goApprovals }}" style="{{ mApprovals }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 10.5l3 3 7-7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Approvals</span></button>
+<button type="button" onClick="{{ goHealth }}" style="{{ mHealth }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 11h3l2-4 2.5 7 2-3H17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 11px/1 Geist,sans-serif">Health</span></button>
+</div>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:16px;right:16px;bottom:84px;z-index:8;background:#1C1F16;color:#F5F7F8;border-radius:10px;padding:13px 15px;display:flex;align-items:center;gap:10px;animation:toastIn .18s ease-out;box-shadow:0 8px 24px -6px rgba(28,31,22,.3)">
+<svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true" style="flex:none"><path d="M4 9.4l3.5 3.4L14 5.8" stroke="#FFF78D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<span style="flex:1;font:500 13.5px/1.35 Geist,sans-serif">{{ toast }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:7;background:rgba(28,31,22,.34);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fadeIn .16s ease-out;display:flex;flex-direction:column;justify-content:flex-end">
+<div onClick="{{ closeSheet }}" style="flex:1"></div>
+<div style="background:rgba(255,255,255,.86);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);border-top:1px solid rgba(255,255,255,.7);border-radius:20px 20px 0 0;padding:20px 16px 22px;box-shadow:0 -8px 24px -6px rgba(28,31,22,.2);animation:sheetUp .22s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;gap:16px">
+<span style="width:36px;height:4px;border-radius:999px;background:#E1E6E8;align-self:center"></span>
+<sc-if value="{{ sheetIdle }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 21px/1.25 Geist,sans-serif;letter-spacing:-.015em">{{ sheetTitle }}</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346;text-wrap:pretty">{{ sheetBody }}</span>
+</div>
+<div style="background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ sheetRows }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;font:400 14px/1 Geist,sans-serif;color:#4E5346"><span>{{ r.k }}</span><span style="font-weight:500;color:#1C1F16;font-variant-numeric:tabular-nums">{{ r.v }}</span></div>
+</sc-for>
+</div>
+<sc-if value="{{ needsTyped }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="font:500 13px/1 Geist,sans-serif;color:#4E5346">Type REJECT to confirm</span>
+<input type="text" value="{{ typed }}" onChange="{{ onTyped }}" placeholder="REJECT" style="height:48px;border:1px solid #CBD3D6;border-radius:4px;background:#fff;padding:0 12px;font:500 15px 'Geist Mono',monospace;letter-spacing:.08em;color:#1C1F16;outline:none;width:100%;box-sizing:border-box" style-focus="border-color:#2B5748;outline:2px solid #2B5748;outline-offset:2px"></input>
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:9px">
+<button type="button" onClick="{{ confirm }}" disabled="{{ confirmDisabled }}" style="{{ confirmStyle }}" style-focus="outline:2px solid #2B5748;outline-offset:2px">{{ confirmLabel }}</button>
+<button type="button" onClick="{{ closeSheet }}" style="height:48px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;color:#1C1F16;font:600 15px Geist,sans-serif;cursor:pointer;transition:background .16s ease" style-hover="background:#F5F7F8" style-focus="outline:2px solid #2B5748;outline-offset:2px">Cancel</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ sheetLoading }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;padding:26px 0 34px">
+<span style="width:28px;height:28px;border-radius:50%;border:2.5px solid #E1E6E8;border-top-color:#2B5748;animation:spin .7s linear infinite;display:block"></span>
+<span style="font:500 15px/1 Geist,sans-serif;color:#4E5346">{{ loadingLabel }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ sheetDone }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:14px 0 8px;text-align:center">
+<span style="width:52px;height:52px;border-radius:50%;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:600 19px/1.25 Geist,sans-serif">{{ doneTitle }}</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346">{{ doneBody }}</span>
+</div>
+<button type="button" onClick="{{ closeSheet }}" style="width:100%;height:48px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 15px Geist,sans-serif;cursor:pointer;margin-top:4px;transition:background .16s ease" style-hover="background:#234739" style-focus="outline:2px solid #2B5748;outline-offset:2px">Done</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Desktop · 1440 · platform ops</span>
+<div style="width:1440px;height:880px;box-sizing:border-box;border:1px solid #C9D1D4;border-radius:14px;background:#F5F7F8;overflow:hidden;position:relative;display:flex">
+
+<div style="width:236px;box-sizing:border-box;flex:none;border-right:1px solid #E1E6E8;background:#fff;padding:20px 14px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:center;gap:9px;padding:0 6px">
+<span style="width:22px;height:22px;border-radius:6px;background:#1C1F16;display:block"></span>
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 14px/1.2 Geist,sans-serif">{{ platformName }}</span><span style="font:400 11.5px/1 'Geist Mono',monospace;color:#6E7679">platform admin</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<button type="button" onClick="{{ goDeskStats }}" style="{{ rStats }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M4 15V9M8 15V5M12 15v-4M16 15V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Stats</span></button>
+<button type="button" onClick="{{ goDeskStores }}" style="{{ rStores }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M4 8.5h12V16H4zM4 8.5L5.6 4.5h8.8L16 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Stores</span></button>
+<button type="button" onClick="{{ goDeskApprovals }}" style="{{ rApprovals }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M5 10.5l3 3 7-7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="flex:1;font:500 14px/1 Geist,sans-serif">Approvals</span><sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}"><span style="font:600 11.5px/1 'Geist Mono',monospace;background:#FFF78D;color:#3F3A08;border-radius:999px;padding:4px 7px;font-variant-numeric:tabular-nums">{{ pendingCount }}</span></sc-if></button>
+<button type="button" onClick="{{ goDeskHealth }}" style="{{ rHealth }}" style-focus="outline:2px solid #2B5748;outline-offset:-2px"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex:none"><path d="M3 11h3l2-4 2.5 7 2-3H17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:500 14px/1 Geist,sans-serif">Health</span></button>
+</div>
+<div style="margin-top:auto;background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:4px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Outstanding liability</span>
+<span style="font:600 21px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">732k pts</span>
+<span style="font:400 12px/1 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">≈ £2,928 across 412 stores</span>
+</div>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+<div style="position:absolute;top:0;left:0;right:0;z-index:3;padding:18px 24px;border-bottom:1px solid #E1E6E8;display:flex;align-items:center;justify-content:space-between;gap:16px;{{ chromeGlass }}">
+<div style="display:flex;flex-direction:column;gap:2px">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679">Friday 22 August</span>
+<span style="font:600 22px/1.2 Geist,sans-serif;letter-spacing:-.018em">{{ deskTitle }}</span>
+</div>
+<span style="height:40px;padding:0 14px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;display:inline-flex;align-items:center;gap:9px;font:500 13.5px/1 Geist,sans-serif;color:#4E5346">Last 30 days<svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.5l4 4 4-4" stroke="#4E5346" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+</div>
+
+<div style="flex:1;overflow-y:auto;padding:104px 24px 24px;display:flex;flex-direction:column;gap:16px">
+
+<sc-if value="{{ deskStats }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">
+<sc-for list="{{ kpisWide }}" as="k" hint-placeholder-count="5">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:18px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:border-color .16s ease,box-shadow .16s ease" style-hover="border-color:#CBD3D6;box-shadow:0 6px 16px -10px rgba(28,31,22,.2)">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ k.label }}</span>
+<span style="font:600 28px/1 Geist,sans-serif;letter-spacing:-.028em;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+<span style="display:flex;align-items:center;gap:5px;font:500 12.5px/1 Geist,sans-serif;font-variant-numeric:tabular-nums;color:{{ k.color }}"><span style="{{ k.arrowStyle }}"></span>{{ k.delta }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 16px/1.2 Geist,sans-serif">Points across the platform</span><span style="font:400 12.5px/1 Geist,sans-serif;color:#6E7679">Daily, last 30 days</span></div>
+<div style="display:flex;gap:16px">
+<span style="display:flex;align-items:center;gap:7px;font:400 12.5px/1 Geist,sans-serif;color:#4E5346"><span style="width:14px;height:3px;border-radius:2px;background:#2B5748"></span>Issued</span>
+<span style="display:flex;align-items:center;gap:7px;font:400 12.5px/1 Geist,sans-serif;color:#4E5346"><span style="width:14px;height:3px;border-radius:2px;background:#B79A00"></span>Redeemed</span>
+</div>
+</div>
+<svg viewBox="0 0 320 120" width="100%" height="210" preserveAspectRatio="none" aria-label="Points issued versus redeemed across the platform" data-om-raster="true">
+<line x1="0" y1="30" x2="320" y2="30" stroke="#EDF0F2" stroke-width="1"></line>
+<line x1="0" y1="60" x2="320" y2="60" stroke="#EDF0F2" stroke-width="1"></line>
+<line x1="0" y1="90" x2="320" y2="90" stroke="#EDF0F2" stroke-width="1"></line>
+<path d="{{ issuedArea }}" fill="#E4EDEA"></path>
+<path d="{{ issuedLine }}" fill="none" stroke="#2B5748" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+<path d="{{ redeemedLine }}" fill="none" stroke="#B79A00" stroke-width="2" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" stroke-linejoin="round" stroke-linecap="round"></path>
+</svg>
+<div style="display:flex;gap:26px;border-top:1px solid #EDF0F2">
+<div style="display:flex;flex-direction:column;gap:3px;padding-top:12px"><span style="font:400 12px/1 'Geist Mono',monospace;color:#6E7679">ISSUED</span><span style="font:600 18px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">1.24M</span></div>
+<div style="display:flex;flex-direction:column;gap:3px;padding-top:12px"><span style="font:400 12px/1 'Geist Mono',monospace;color:#6E7679">REDEEMED</span><span style="font:600 18px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">508k</span></div>
+<div style="display:flex;flex-direction:column;gap:3px;padding-top:12px"><span style="font:400 12px/1 'Geist Mono',monospace;color:#6E7679">REDEMPTION RATE</span><span style="font:600 18px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">41%</span></div>
+<div style="display:flex;flex-direction:column;gap:3px;padding-top:12px"><span style="font:400 12px/1 'Geist Mono',monospace;color:#6E7679">LIABILITY</span><span style="font:600 18px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">732k pts</span></div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 16px/1.2 Geist,sans-serif">New stores</span><span style="font:400 12.5px/1 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">142 this year · 24 in August</span></div>
+<div style="display:flex;align-items:flex-end;gap:9px">
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="8">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px">
+<span style="font:500 11.5px/1 'Geist Mono',monospace;color:#6E7679;font-variant-numeric:tabular-nums">{{ m.value }}</span>
+<span style="width:100%;height:172px;display:flex;align-items:flex-end"><span style="width:100%;flex:none;border-radius:6px 6px 0 0;height:{{ m.h }};background:{{ m.fill }}"></span></span>
+<span style="font:500 12px/1 Geist,sans-serif;color:{{ m.labelColor }}">{{ m.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:20px;display:flex;flex-direction:column;gap:14px">
+<span style="font:600 16px/1.2 Geist,sans-serif">Stores by plan</span>
+<sc-for list="{{ plans }}" as="pl" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font:400 13.5px/1 Geist,sans-serif;color:#4E5346"><span>{{ pl.name }}</span><span style="font-weight:500;color:#1C1F16;font-variant-numeric:tabular-nums">{{ pl.count }}</span></div>
+<span style="height:8px;border-radius:999px;background:#EDF0F2;overflow:hidden;display:block"><span style="display:block;height:8px;border-radius:999px;background:{{ pl.fill }};width:{{ pl.w }}"></span></span>
+<span style="font:400 12px/1 Geist,sans-serif;color:#6E7679;font-variant-numeric:tabular-nums">{{ pl.share }} of stores · {{ pl.mrr }} MRR</span>
+</div>
+</sc-for>
+</div>
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<div style="padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between"><span style="font:600 16px/1.2 Geist,sans-serif">Busiest stores</span><span style="font:400 12px/1 'Geist Mono',monospace;color:#6E7679">30 days</span></div>
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:9px 20px;background:#EBE3A7;font:500 11px/1.3 'Geist Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#4E5346"><span>Store</span><span>Plan</span><span style="text-align:right">Customers</span><span style="text-align:right">Issued</span></div>
+<sc-for list="{{ topStores }}" as="s" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;align-items:center;padding:11px 20px;border-top:1px solid #EDF0F2;min-height:42px;transition:background .16s ease" style-hover="background:#FAFBFC">
+<span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:28px;height:28px;flex:none;border-radius:8px;background:#EBE3A7;display:flex;align-items:center;justify-content:center;font:600 11px Geist,sans-serif;color:#5A5410">{{ s.initials }}</span><span style="font:500 14px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span></span>
+<span style="font:400 13px/1 Geist,sans-serif;color:#4E5346">{{ s.plan }}</span>
+<span style="text-align:right;font:600 14px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.customers }}</span>
+<span style="text-align:right;font:600 14px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.issued }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ deskStores }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;gap:8px">
+<sc-for list="{{ storeFilters }}" as="f" hint-placeholder-count="3">
+<button type="button" onClick="{{ f.select }}" style="{{ f.style }}">{{ f.label }}</button>
+</sc-for>
+</div>
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<div style="padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between"><span style="font:600 16px/1.2 Geist,sans-serif">Store register</span><span style="font:400 12.5px/1 'Geist Mono',monospace;color:#6E7679">{{ storeCountLabel }}</span></div>
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 0.9fr;padding:9px 20px;background:#EBE3A7;font:500 11px/1.3 'Geist Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#4E5346"><span>Store</span><span>Plan</span><span style="text-align:right">Customers</span><span style="text-align:right">Issued</span><span style="text-align:right">Liability</span><span style="text-align:right">Status</span></div>
+<sc-for list="{{ stores }}" as="s" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 0.9fr;align-items:center;padding:11px 20px;border-top:1px solid #EDF0F2;min-height:44px;transition:background .16s ease" style-hover="background:#FAFBFC">
+<span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:28px;height:28px;flex:none;border-radius:8px;background:#EBE3A7;display:flex;align-items:center;justify-content:center;font:600 11px Geist,sans-serif;color:#5A5410">{{ s.initials }}</span><span style="font:500 14px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span></span>
+<span style="font:400 13px/1 Geist,sans-serif;color:#4E5346">{{ s.plan }}</span>
+<span style="text-align:right;font:600 14px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.customers }}</span>
+<span style="text-align:right;font:600 14px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.issued }}</span>
+<span style="text-align:right;font:600 14px/1 Geist,sans-serif;font-variant-numeric:tabular-nums">{{ s.liability }}</span>
+<span style="display:flex;justify-content:flex-end"><span style="{{ s.pillStyle }}">{{ s.pillLabel }}</span></span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ deskApprovals }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<sc-if value="{{ queueEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px dashed #CBD3D6;border-radius:12px;padding:44px 20px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center">
+<span style="width:48px;height:48px;border-radius:50%;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<span style="font:600 16px/1.3 Geist,sans-serif">Queue clear</span>
+<span style="font:400 13.5px/1.5 Geist,sans-serif;color:#6E7679;max-width:40ch">Every application has been reviewed.</span>
+</div>
+</sc-if>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+<sc-for list="{{ pending }}" as="a" hint-placeholder-count="3">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0;transition:border-color .16s ease,box-shadow .16s ease" style-hover="border-color:#CBD3D6;box-shadow:0 6px 16px -10px rgba(28,31,22,.2)">
+<div style="display:flex;align-items:flex-start;gap:12px">
+<span style="width:38px;height:38px;flex:none;border-radius:9px;background:#F5F7F8;border:1px solid #E1E6E8;display:flex;align-items:center;justify-content:center;font:500 12.5px 'Geist Mono',monospace;color:#4E5346">{{ a.initials }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 15.5px/1.25 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
+<span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">{{ a.meta }}</span>
+</div>
+</div>
+<div style="background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ a.checks }}" as="c" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;font:400 13px/1 Geist,sans-serif;color:#4E5346"><span style="{{ c.dot }}"></span>{{ c.label }}</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:9px">
+<button type="button" onClick="{{ a.approve }}" style="flex:1;height:42px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease" style-hover="background:#234739" style-active="background:#1C3A2E" style-focus="outline:2px solid #2B5748;outline-offset:2px">Approve</button>
+<button type="button" onClick="{{ a.reject }}" style="flex:none;height:42px;padding:0 16px;border:1px solid #E0B6AE;border-radius:8px;background:#fff;color:#96271A;font:600 14px Geist,sans-serif;cursor:pointer;transition:background .16s ease" style-hover="background:#F8E5E1" style-focus="outline:2px solid #96271A;outline-offset:2px">Reject</button>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ deskHealth }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:20px;display:flex;align-items:center;gap:14px">
+<span style="width:40px;height:40px;flex:none;border-radius:10px;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:600 16px/1.25 Geist,sans-serif">All systems normal</span><span style="font:400 12.5px/1.3 'Geist Mono',monospace;color:#6E7679">checked 40s ago · 99.98% uptime this month</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+<sc-for list="{{ health }}" as="h" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:18px;display:flex;flex-direction:column;gap:7px;min-width:0">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6E7679;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.label }}</span>
+<span style="font:600 26px/1 Geist,sans-serif;letter-spacing:-.024em;font-variant-numeric:tabular-nums">{{ h.value }}</span>
+<span style="{{ h.noteStyle }}">{{ h.note }}</span>
+</div>
+</sc-for>
+</div>
+<div style="background:#fff;border:1px solid #E1E6E8;border-radius:12px;box-shadow:0 1px 2px rgba(28,31,22,.04);overflow:hidden">
+<div style="padding:18px 20px 14px"><span style="font:600 16px/1.2 Geist,sans-serif">Recent incidents</span></div>
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr;padding:9px 20px;background:#EBE3A7;font:500 11px/1.3 'Geist Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#4E5346"><span>Incident</span><span>When</span><span style="text-align:right">Status</span></div>
+<sc-for list="{{ incidents }}" as="i" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr;align-items:center;padding:12px 20px;border-top:1px solid #EDF0F2;min-height:44px;transition:background .16s ease" style-hover="background:#FAFBFC">
+<span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="{{ i.dot }}"></span><span style="font:500 14px/1.3 Geist,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ i.title }}</span></span>
+<span style="font:400 12.5px/1 'Geist Mono',monospace;color:#6E7679">{{ i.meta }}</span>
+<span style="display:flex;justify-content:flex-end"><span style="{{ i.pillStyle }}">{{ i.status }}</span></span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:7;background:rgba(28,31,22,.34);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fadeIn .16s ease-out;display:flex;align-items:center;justify-content:center">
+<div style="width:470px;background:rgba(255,255,255,.86);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);border:1px solid rgba(255,255,255,.7);border-radius:14px;padding:24px;box-shadow:0 16px 40px -12px rgba(28,31,22,.35);display:flex;flex-direction:column;gap:18px">
+<sc-if value="{{ sheetIdle }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 21px/1.25 Geist,sans-serif;letter-spacing:-.015em">{{ sheetTitle }}</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346;text-wrap:pretty">{{ sheetBody }}</span>
+</div>
+<div style="background:#F5F7F8;border:1px solid #E1E6E8;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ sheetRows }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;font:400 14px/1 Geist,sans-serif;color:#4E5346"><span>{{ r.k }}</span><span style="font-weight:500;color:#1C1F16;font-variant-numeric:tabular-nums">{{ r.v }}</span></div>
+</sc-for>
+</div>
+<sc-if value="{{ needsTyped }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="font:500 13px/1 Geist,sans-serif;color:#4E5346">Type REJECT to confirm</span>
+<input type="text" value="{{ typed }}" onChange="{{ onTyped }}" placeholder="REJECT" style="height:44px;border:1px solid #CBD3D6;border-radius:4px;background:#fff;padding:0 12px;font:500 14.5px 'Geist Mono',monospace;letter-spacing:.08em;color:#1C1F16;outline:none;width:100%;box-sizing:border-box" style-focus="border-color:#2B5748;outline:2px solid #2B5748;outline-offset:2px"></input>
+</div>
+</sc-if>
+<div style="display:flex;gap:10px;justify-content:flex-end">
+<button type="button" onClick="{{ closeSheet }}" style="height:44px;padding:0 18px;border:1px solid #CBD3D6;border-radius:8px;background:#fff;color:#1C1F16;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease" style-hover="background:#F5F7F8" style-focus="outline:2px solid #2B5748;outline-offset:2px">Cancel</button>
+<button type="button" onClick="{{ confirm }}" disabled="{{ confirmDisabled }}" style="{{ confirmDeskStyle }}" style-focus="outline:2px solid #2B5748;outline-offset:2px">{{ confirmLabel }}</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ sheetLoading }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;padding:22px 0 26px">
+<span style="width:28px;height:28px;border-radius:50%;border:2.5px solid #E1E6E8;border-top-color:#2B5748;animation:spin .7s linear infinite;display:block"></span>
+<span style="font:500 15px/1 Geist,sans-serif;color:#4E5346">{{ loadingLabel }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ sheetDone }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:8px 0;text-align:center">
+<span style="width:52px;height:52px;border-radius:50%;background:#E4EDEA;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M6.5 13.4l4.4 4.3 8.6-9" stroke="#2B5748" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:600 19px/1.25 Geist,sans-serif">{{ doneTitle }}</span>
+<span style="font:400 14.5px/1.5 Geist,sans-serif;color:#4E5346">{{ doneBody }}</span>
+</div>
+<button type="button" onClick="{{ closeSheet }}" style="height:44px;padding:0 22px;border:none;border-radius:8px;background:#2B5748;color:#F5F7F8;font:600 14.5px Geist,sans-serif;cursor:pointer;margin-top:4px;transition:background .16s ease" style-hover="background:#234739" style-focus="outline:2px solid #2B5748;outline-offset:2px">Done</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+
+</div>
+
+<div style="border:1px solid #E1E6E8;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(28,31,22,.04);padding:22px;display:flex;flex-direction:column;gap:12px;max-width:940px">
+<span style="font:500 11px/1 'Geist Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6E7679">Decisions on this console</span>
+<div style="display:flex;flex-direction:column;gap:7px;font:400 14px/1.55 Geist,sans-serif;color:#4E5346">
+<span><strong style="font-weight:600;color:#1C1F16">Rejection costs more than approval, so it costs more effort.</strong> Approving is one tap with a summary; rejecting requires typing REJECT — the confirm button stays disabled until it matches. Suspending a store sits between: a confirmation, no typing, because it is reversible.</span>
+<span><strong style="font-weight:600;color:#1C1F16">Liability is the platform's headline risk.</strong> Outstanding points are money the network owes, so the figure is pinned in the rail and repeated under the chart rather than hidden in a report.</span>
+<span><strong style="font-weight:600;color:#1C1F16">The queue is a first-class destination.</strong> Pending applications carry a count in the app bar and a badge on the rail item — an admin should never have to go looking for work that is waiting.</span>
+<span><strong style="font-weight:600;color:#1C1F16">Same charts, same rules as the owner console.</strong> Teal issued, deep-accent redeemed, three gridlines, tabular figures, bars in a fixed plot area so height is always proportional to value. Nothing new was invented for admin.</span>
+</div>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1900,&quot;height&quot;:1150},&quot;platformName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;LoyaltyLabs&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Content&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'stats', deskTab: 'stats', storeFilter: 'All',
+    suspended: {}, decided: {}, sheet: null, intent: null, typed: '', toast: null
+  };
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+
+  go(tab) { return () => this.setState({ tab }); }
+
+  navStyle(active, mobile) {
+    return mobile
+      ? 'flex:1;min-width:0;height:56px;border:none;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:background .16s ease;background:' +
+        (active ? '#E4EDEA' : 'transparent') + ';color:' + (active ? '#234739' : '#6E7679') + ';'
+      : 'height:42px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;padding:0 12px;text-align:left;transition:background .16s ease;background:' +
+        (active ? '#E4EDEA' : 'transparent') + ';color:' + (active ? '#234739' : '#4E5346') + ';';
+  }
+
+  path(vals, max, close) {
+    const w = 320, h = 120;
+    const pts = vals.map((v, i) => [(i / (vals.length - 1)) * w, h - (v / max) * (h - 12) - 6]);
+    let d = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+    if (close) d += ' L' + w + ' ' + h + ' L0 ' + h + ' Z';
+    return d;
+  }
+
+  renderVals() {
+    const st = this.state;
+
+    const issued = [30, 33, 31, 36, 39, 44, 38, 32, 36, 41, 46, 39, 34, 37, 43, 48, 41, 36, 38, 45, 50, 43, 37, 40, 47, 52, 45, 39, 42, 44];
+    const redeemed = [11, 13, 10, 15, 17, 21, 16, 11, 14, 18, 23, 16, 12, 15, 20, 25, 17, 13, 16, 22, 27, 19, 14, 17, 24, 29, 21, 15, 18, 19];
+
+    const monthDefs = [
+      { l: 'Jan', v: 11 }, { l: 'Feb', v: 14 }, { l: 'Mar', v: 17 },
+      { l: 'Apr', v: 15 }, { l: 'May', v: 19 }, { l: 'Jun', v: 21 },
+      { l: 'Jul', v: 21 }, { l: 'Aug', v: 24 }
+    ];
+    const mMax = 24;
+    const months = monthDefs.map(m => ({
+      label: m.l, value: m.v,
+      h: Math.round((m.v / mMax) * 100) + '%',
+      fill: m.l === 'Aug' ? '#2B5748' : '#CBDAD4',
+      labelColor: m.l === 'Aug' ? '#1C1F16' : '#6E7679'
+    }));
+
+    const arrow = up => 'width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;' +
+      (up ? 'border-bottom:6px solid #245C2E' : 'border-top:6px solid #96271A');
+    const kpiDefs = [
+      { label: 'Active stores', value: '412', delta: '+24 this month', up: true },
+      { label: 'Customers', value: '38,204', delta: '+1,842', up: true },
+      { label: 'MRR', value: '£18.4k', delta: '+6.2%', up: true },
+      { label: 'Redemption rate', value: '41%', delta: '−1.4pp', up: false },
+      { label: 'Churned stores', value: '7', delta: '+2', up: false }
+    ];
+    const mk = k => ({ label: k.label, value: k.value, delta: k.delta, color: k.up ? '#245C2E' : '#96271A', arrowStyle: arrow(k.up) });
+
+    const planDefs = [
+      { name: 'Starter · £29', count: 214, mrr: '£6.2k' },
+      { name: 'Growth · £59', count: 148, mrr: '£8.7k' },
+      { name: 'Scale · £70', count: 50, mrr: '£3.5k' }
+    ];
+    const plans = planDefs.map((p, i) => ({
+      name: p.name, count: p.count, mrr: p.mrr,
+      w: Math.round((p.count / 412) * 100) + '%',
+      share: Math.round((p.count / 412) * 100) + '%',
+      fill: i === 0 ? '#2B5748' : i === 1 ? '#5D8578' : '#9BB5AC'
+    }));
+
+    const storeDefs = [
+      { id: 's1', name: 'Rye & Co. Bakery', plan: 'Growth', customers: 318, issued: '48.2k', liability: '28.8k', status: 'Active', area: 'London N16' },
+      { id: 's2', name: 'Green Lane Deli', plan: 'Scale', customers: 642, issued: '96.4k', liability: '51.2k', status: 'Active', area: 'Manchester M4' },
+      { id: 's3', name: 'Harbour Press Coffee', plan: 'Starter', customers: 96, issued: '11.8k', liability: '7.1k', status: 'Active', area: 'Bristol BS1' },
+      { id: 's4', name: 'Marsh & Mill', plan: 'Growth', customers: 214, issued: '32.6k', liability: '19.4k', status: 'Review', area: 'Leeds LS1' },
+      { id: 's5', name: 'Fenwick Provisions', plan: 'Starter', customers: 58, issued: '6.4k', liability: '3.8k', status: 'Active', area: 'Glasgow G1' }
+    ];
+    const sf = st.storeFilter;
+    const pill = (label, tone) => "font:500 12px/1 'Geist Mono',monospace;padding:6px 9px;border-radius:999px;white-space:nowrap;" +
+      (tone === 'ok' ? 'background:#E4EDEA;color:#234739' : tone === 'warn' ? 'background:#FDF6C9;color:#5A5410' : 'background:#F8E5E1;color:#96271A');
+
+    const stores = storeDefs
+      .map(s => {
+        const suspended = !!st.suspended[s.id];
+        const status = suspended ? 'Suspended' : s.status;
+        return {
+          id: s.id, name: s.name, plan: s.plan,
+          initials: s.name.split(/\s+/).filter(w => /[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join(''),
+          meta: s.area + ' · ' + s.plan,
+          customers: s.customers.toLocaleString('en-GB'),
+          issued: s.issued, liability: s.liability, status,
+          pillStyle: pill(status, suspended ? 'bad' : status === 'Review' ? 'warn' : 'ok'),
+          pillLabel: status,
+          suspendLabel: suspended ? 'Reinstate' : 'Suspend',
+          suspendStyle: 'flex:none;height:44px;padding:0 16px;border-radius:8px;font:600 14.5px Geist,sans-serif;cursor:pointer;transition:background .16s ease;' +
+            (suspended ? 'border:none;background:#2B5748;color:#F5F7F8;' : 'border:1px solid #E0B6AE;background:#fff;color:#96271A;'),
+          suspend: suspended
+            ? () => { this.setState({ suspended: Object.assign({}, st.suspended, { [s.id]: false }) }); this.flash(s.name + ' reinstated'); }
+            : () => this.setState({ sheet: 'idle', typed: '', intent: { kind: 'suspend', id: s.id, name: s.name, customers: s.customers, liability: s.liability } })
+        };
+      })
+      .filter(s => sf === 'All' || (sf === 'Review' ? s.status === 'Review' : sf === 'Suspended' ? s.status === 'Suspended' : true));
+
+    const appDefs = [
+      { id: 'a1', name: 'Ash & Ember Pizza', meta: 'applied 4h ago · Sheffield S1', checks: [['Business verified', true], ['Bank details matched', true], ['Photos uploaded', false]] },
+      { id: 'a2', name: 'Wren Street Flowers', meta: 'applied 9h ago · Cardiff CF10', checks: [['Business verified', true], ['Bank details matched', true], ['Photos uploaded', true]] },
+      { id: 'a3', name: 'Tidewater Fish Bar', meta: 'applied 1d ago · Brighton BN1', checks: [['Business verified', true], ['Bank details matched', false], ['Photos uploaded', true]] }
+    ];
+    const pending = appDefs.filter(a => !st.decided[a.id]).map(a => ({
+      name: a.name, meta: a.meta,
+      initials: a.name.split(/\s+/).filter(w => /[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join(''),
+      checks: a.checks.map(c => ({
+        label: c[0] + (c[1] ? '' : ' — missing'),
+        dot: 'width:7px;height:7px;flex:none;border-radius:50%;background:' + (c[1] ? '#2B5748' : '#B79A00')
+      })),
+      approve: () => this.setState({ sheet: 'idle', typed: '', intent: { kind: 'approve', id: a.id, name: a.name } }),
+      reject: () => this.setState({ sheet: 'idle', typed: '', intent: { kind: 'reject', id: a.id, name: a.name } })
+    }));
+
+    const health = [
+      { label: 'API uptime', value: '99.98%', note: '30-day rolling', ok: true },
+      { label: 'Median scan', value: '240ms', note: 'p95 610ms', ok: true },
+      { label: 'Failed scans', value: '0.4%', note: 'mostly expired codes', ok: true },
+      { label: 'Webhook queue', value: '12', note: 'draining normally', ok: true }
+    ].map(h => Object.assign({}, h, {
+      noteStyle: 'font:400 12px/1.35 Geist,sans-serif;color:' + (h.ok ? '#6E7679' : '#96271A')
+    }));
+
+    const incidents = [
+      { title: 'Scan latency above target', meta: '19 Aug · 34 min', status: 'Resolved', tone: 'ok' },
+      { title: 'Webhook retries backed up', meta: '11 Aug · 2 h', status: 'Resolved', tone: 'ok' },
+      { title: 'Payments provider degraded', meta: '2 Aug · 18 min', status: 'Resolved', tone: 'ok' }
+    ].map(i => ({
+      title: i.title, meta: i.meta, status: i.status,
+      dot: 'width:8px;height:8px;flex:none;border-radius:50%;background:#2B5748',
+      pillStyle: pill(i.status, i.tone)
+    }));
+
+    const chip = (label, active, on) => ({
+      label, select: on,
+      style: 'height:36px;padding:0 13px;border-radius:999px;font:500 13px Geist,sans-serif;cursor:pointer;transition:background .16s ease,border-color .16s ease;' +
+        (active ? 'border:1px solid #2B5748;background:#E4EDEA;color:#234739;' : 'border:1px solid #CBD3D6;background:#fff;color:#4E5346;')
+    });
+
+    const titles = { stats: 'Platform stats', stores: 'Stores', approvals: 'Approvals', health: 'System health' };
+    const intent = st.intent;
+    const kind = intent ? intent.kind : null;
+    const needsTyped = kind === 'reject';
+    const typedOk = st.typed.trim().toUpperCase() === 'REJECT';
+
+    return {
+      platformName: this.props.platformName ?? 'LoyaltyLabs',
+      screenTitle: titles[st.tab], deskTitle: titles[st.deskTab],
+      isStats: st.tab === 'stats', isStores: st.tab === 'stores', isApprovals: st.tab === 'approvals', isHealth: st.tab === 'health',
+      goStats: this.go('stats'), goStores: this.go('stores'), goApprovals: this.go('approvals'), goHealth: this.go('health'),
+      mStats: this.navStyle(st.tab === 'stats', true), mStores: this.navStyle(st.tab === 'stores', true),
+      mApprovals: this.navStyle(st.tab === 'approvals', true), mHealth: this.navStyle(st.tab === 'health', true),
+      deskStats: st.deskTab === 'stats', deskStores: st.deskTab === 'stores',
+      deskApprovals: st.deskTab === 'approvals', deskHealth: st.deskTab === 'health',
+      goDeskStats: () => this.setState({ deskTab: 'stats' }),
+      goDeskStores: () => this.setState({ deskTab: 'stores' }),
+      goDeskApprovals: () => this.setState({ deskTab: 'approvals' }),
+      goDeskHealth: () => this.setState({ deskTab: 'health' }),
+      rStats: this.navStyle(st.deskTab === 'stats', false), rStores: this.navStyle(st.deskTab === 'stores', false),
+      rApprovals: this.navStyle(st.deskTab === 'approvals', false), rHealth: this.navStyle(st.deskTab === 'health', false),
+      kpis: kpiDefs.slice(0, 4).map(mk), kpisWide: kpiDefs.map(mk),
+      months, plans, stores, pending, health, incidents,
+      topStores: storeDefs.slice(0, 5).map(s => ({
+        name: s.name, plan: s.plan,
+        initials: s.name.split(/\s+/).filter(w => /[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join(''),
+        customers: s.customers.toLocaleString('en-GB'), issued: s.issued
+      })),
+      storeCountLabel: stores.length + ' of ' + storeDefs.length + ' shown · 412 total',
+      storeFilters: [
+        chip('All', sf === 'All', () => this.setState({ storeFilter: 'All' })),
+        chip('Review', sf === 'Review', () => this.setState({ storeFilter: 'Review' })),
+        chip('Suspended', sf === 'Suspended', () => this.setState({ storeFilter: 'Suspended' }))
+      ],
+      pendingCount: pending.length,
+      hasPending: pending.length > 0,
+      queueEmpty: pending.length === 0,
+      issuedLine: this.path(issued, 60, false),
+      issuedArea: this.path(issued, 60, true),
+      redeemedLine: this.path(redeemed, 60, false),
+      chromeGlass: st.sheet !== null
+        ? 'background:#F5F7F8'
+        : 'background:rgba(245,247,248,.72);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)',
+      sheetOpen: st.sheet !== null,
+      sheetIdle: st.sheet === 'idle',
+      sheetLoading: st.sheet === 'loading',
+      sheetDone: st.sheet === 'done',
+      needsTyped, typed: st.typed,
+      onTyped: (e) => this.setState({ typed: e.target.value }),
+      sheetTitle: !intent ? '' :
+        kind === 'approve' ? 'Approve ' + intent.name + '?' :
+        kind === 'reject' ? 'Reject ' + intent.name + '?' :
+        'Suspend ' + intent.name + '?',
+      sheetBody: !intent ? '' :
+        kind === 'approve' ? 'The store goes live immediately and can start issuing points. Billing begins at the end of the trial.' :
+        kind === 'reject' ? 'The applicant is notified and cannot reapply for 30 days. This cannot be undone.' :
+        'Customers keep their points, but the store stops issuing and its rewards vanish from wallets until you reinstate it.',
+      sheetRows: !intent ? [] :
+        kind === 'suspend'
+          ? [{ k: 'Customers affected', v: intent.customers }, { k: 'Outstanding liability', v: intent.liability }, { k: 'Status after', v: 'Suspended' }]
+          : kind === 'approve'
+            ? [{ k: 'Plan', v: 'Starter · £29' }, { k: 'Trial', v: '14 days' }, { k: 'Goes live', v: 'Immediately' }]
+            : [{ k: 'Applied', v: 'This week' }, { k: 'Applicant notified', v: 'Yes' }, { k: 'Can reapply', v: 'In 30 days' }],
+      confirmLabel: kind === 'approve' ? 'Approve store' : kind === 'reject' ? 'Reject application' : 'Suspend store',
+      confirmDisabled: needsTyped && !typedOk,
+      confirmStyle: 'height:48px;border:none;border-radius:8px;font:600 15px Geist,sans-serif;width:100%;transition:background .16s ease;' +
+        (needsTyped && !typedOk
+          ? 'background:#EDF0F2;color:#9AA1A4;cursor:not-allowed;'
+          : kind === 'approve' ? 'background:#2B5748;color:#F5F7F8;cursor:pointer;' : 'background:#96271A;color:#fff;cursor:pointer;'),
+      confirmDeskStyle: 'height:44px;padding:0 18px;border:none;border-radius:8px;font:600 14.5px Geist,sans-serif;transition:background .16s ease;' +
+        (needsTyped && !typedOk
+          ? 'background:#EDF0F2;color:#9AA1A4;cursor:not-allowed;'
+          : kind === 'approve' ? 'background:#2B5748;color:#F5F7F8;cursor:pointer;' : 'background:#96271A;color:#fff;cursor:pointer;'),
+      loadingLabel: kind === 'approve' ? 'Approving…' : kind === 'reject' ? 'Rejecting…' : 'Suspending…',
+      doneTitle: kind === 'approve' ? 'Store approved' : kind === 'reject' ? 'Application rejected' : 'Store suspended',
+      doneBody: !intent ? '' :
+        kind === 'approve' ? intent.name + ' is live and can issue points now.' :
+        kind === 'reject' ? intent.name + ' has been notified.' :
+        intent.name + ' can no longer issue points. Reinstate any time from the register.',
+      confirm: () => {
+        if (needsTyped && !typedOk) return;
+        this.setState({ sheet: 'loading' });
+        setTimeout(() => {
+          if (kind === 'suspend') this.setState({ sheet: 'done', suspended: Object.assign({}, st.suspended, { [intent.id]: true }) });
+          else this.setState({ sheet: 'done', decided: Object.assign({}, st.decided, { [intent.id]: kind }) });
+        }, 1000);
+      },
+      closeSheet: () => this.setState({ sheet: null, intent: null, typed: '' }),
+      toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
