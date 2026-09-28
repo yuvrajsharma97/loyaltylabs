@@ -56,5 +56,9 @@ desktop.ini
 # Local notes / docs not meant for the repo
 notforgit/
 
+# Design reference files (mockups, design-system source, uploads)
+/Design component landing Hero section/
+/Design system foundations needed/
+
 # Claude
 .claude
