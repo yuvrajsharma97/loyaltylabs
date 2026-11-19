@@ -7,6 +7,7 @@ import IconButton from '../../shared/components/IconButton';
 const NAV_ITEMS = [
   { to: '/admin/stats', icon: 'bar_chart', label: 'Stats' },
   { to: '/admin/stores', icon: 'storefront', label: 'Stores' },
+  { to: '/admin/transactions', icon: 'receipt_long', label: 'Transactions' },
   { to: '/admin/customers', icon: 'group', label: 'Customers' },
   { to: '/admin/disputes', icon: 'flag', label: 'Disputes' },
   { to: '/admin/health', icon: 'monitor_heart', label: 'Health' },

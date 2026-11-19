@@ -21,7 +21,10 @@ const STATUS_FILTERS = [
   { value: '', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
+  { value: 'closed', label: 'Closed' },
 ];
+
+const STATUS_TONE = { active: 'success', suspended: 'error', closed: 'neutral' };
 
 const PAGE_SIZE = 10;
 
@@ -113,7 +116,7 @@ const AdminStores = () => {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-card-title text-text-primary">{store.name}</p>
-                    <Badge tone={store.status === 'active' ? 'success' : 'error'}>{store.status}</Badge>
+                    <Badge tone={STATUS_TONE[store.status] || 'neutral'}>{store.status}</Badge>
                   </div>
                   <p className="truncate text-body-sm text-text-secondary">
                     {[store.address, `Created ${formatDate(store.createdAt)}`].filter(Boolean).join(' · ')}
@@ -124,15 +127,18 @@ const AdminStores = () => {
                 <Button size="sm" variant="secondary" onClick={() => openReconcile(store)}>
                   Reconcile
                 </Button>
-                <Button
-                  size="sm"
-                  variant={store.status === 'active' ? 'danger' : 'primary'}
-                  onClick={() =>
-                    setStatusChange({ store, nextStatus: store.status === 'active' ? 'suspended' : 'active' })
-                  }
-                >
-                  {store.status === 'active' ? 'Suspend' : 'Reactivate'}
-                </Button>
+                {/* A closed shop's owner deleted their account: it can't be reopened. */}
+                {store.status !== 'closed' && (
+                  <Button
+                    size="sm"
+                    variant={store.status === 'active' ? 'danger' : 'primary'}
+                    onClick={() =>
+                      setStatusChange({ store, nextStatus: store.status === 'active' ? 'suspended' : 'active' })
+                    }
+                  >
+                    {store.status === 'active' ? 'Suspend' : 'Reactivate'}
+                  </Button>
+                )}
               </div>
             </Card>
           ))}

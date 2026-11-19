@@ -19,10 +19,10 @@ const QRPanel = ({ qrToken }) => {
         <Badge tone="success">Live</Badge>
       </button>
 
-      <Modal isOpen={isEnlarged} onClose={() => setIsEnlarged(false)} title="Your code">
+      <Modal isOpen={isEnlarged} onClose={() => setIsEnlarged(false)} title="Your FuseCard">
         <div className="flex flex-col items-center gap-4 py-2">
           <QRCodeSVG value={qrToken} size={260} fgColor="#1C1F16" bgColor="#FFFFFF" />
-          <p className="text-body-sm text-text-secondary">Show this to the till to earn or redeem points.</p>
+          <p className="text-body-sm text-text-secondary">Show your FuseCard at the till to earn or redeem points.</p>
         </div>
       </Modal>
     </>

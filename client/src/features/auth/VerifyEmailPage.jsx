@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import * as authApi from '../../api/auth';
+import { useAuth } from '../../shared/hooks/useAuth';
 import { showSuccessToast } from '../../shared/utils/toast';
 import AuthCard from './AuthCard';
 import Input from '../../shared/components/Input';
@@ -10,14 +11,15 @@ import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import { LIMITS, validateEmail } from '../../shared/utils/validation';
 
 const STATUS_CONTENT = {
-  done: { icon: 'check_circle', title: 'Email verified', body: 'Your account is ready - you can sign in now.' },
-  already: { icon: 'check_circle', title: 'Already verified', body: 'This account is already verified - just sign in.' },
+  done: { icon: 'check_circle', title: 'Email verified', body: 'All set - your email is verified and you can redeem your points for rewards.' },
+  already: { icon: 'check_circle', title: 'Already verified', body: 'This account is already verified.' },
   expired: { icon: 'error', title: 'Link expired', body: 'That verification link has expired. Send a new one below.' },
   invalid: { icon: 'error', title: 'Link invalid', body: 'That verification link isn’t valid. Send a new one below.' },
 };
 
 const VerifyEmailPage = () => {
   const [searchParams] = useSearchParams();
+  const { user, refreshProfile } = useAuth();
   const token = searchParams.get('token');
   const accountType = searchParams.get('accountType') || 'customer';
 
@@ -36,6 +38,13 @@ const VerifyEmailPage = () => {
         else setStatus('invalid');
       });
   }, [token, accountType]);
+
+  // A signed-in customer verifying in the same browser should see redeeming
+  // unlock straight away. Stops once the refreshed profile shows verified.
+  const isSignedInUnverified = Boolean(user) && !user.emailVerified;
+  useEffect(() => {
+    if (status === 'done' && isSignedInUnverified) refreshProfile();
+  }, [status, isSignedInUnverified, refreshProfile]);
 
   const [emailError, setEmailError] = useState(null);
 
@@ -109,8 +118,8 @@ const VerifyEmailPage = () => {
           </form>
         )}
 
-        <Link to="/sign-in" className="text-body-sm text-primary">
-          Back to sign in
+        <Link to={user ? '/' : '/sign-in'} className="text-body-sm text-primary">
+          {user ? 'Continue to your account' : 'Back to sign in'}
         </Link>
       </div>
     </AuthCard>

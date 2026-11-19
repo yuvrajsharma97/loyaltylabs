@@ -1,15 +1,17 @@
 import Button from './Button';
 import Badge from './Badge';
 
-const RewardCard = ({ reward, pointsBalance, onRedeem, isRedeeming = false, isMember = true }) => {
+// isVerified: redeeming needs a verified email; unverified customers can still earn.
+const RewardCard = ({ reward, pointsBalance, onRedeem, isRedeeming = false, isMember = true, isVerified = true }) => {
   const isEnded = Boolean(reward.validTo) && new Date(reward.validTo) < new Date();
   const canAfford = pointsBalance >= reward.pointsRequired;
   const pointsShort = reward.pointsRequired - pointsBalance;
-  const canRedeem = isMember && !isEnded && canAfford;
+  const canRedeem = isMember && isVerified && !isEnded && canAfford;
 
   let hint = null;
   if (isEnded) hint = 'This reward has ended';
   else if (!isMember) hint = 'Join this shop to redeem';
+  else if (!isVerified) hint = 'Verify your email to redeem';
   else if (!canAfford) hint = `Need ${pointsShort} more points`;
 
   return (

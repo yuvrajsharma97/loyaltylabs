@@ -10,6 +10,7 @@ import Icon from '../../shared/components/Icon';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import ChangePasswordCard from '../../shared/components/ChangePasswordCard';
 import SessionsCard from '../../shared/components/SessionsCard';
+import DeleteAccountCard from '../../shared/components/DeleteAccountCard';
 
 // The store owner's own login account - separate from the shop's public
 // profile (Settings > Profile).
@@ -104,6 +105,8 @@ const OwnerAccount = () => {
       <ChangePasswordCard />
 
       <SessionsCard signInPath="/sign-in?as=store" />
+
+      <DeleteAccountCard isStoreOwner email={account.email} />
     </div>
   );
 };

@@ -68,6 +68,13 @@ router.post('/logout-all', requireAuth, handler.logoutAll);
 
 router.get('/account', requireAuth, handler.getAccount);
 router.patch('/account', requireAuth, validate(schemas.updateAccountSchema), handler.updateAccount);
+router.delete(
+  '/account',
+  requireAuth,
+  authAttemptLimiter,
+  validate(schemas.deleteAccountSchema),
+  handler.deleteAccount
+);
 router.post(
   '/change-password',
   requireAuth,

@@ -29,6 +29,8 @@ const pointTransactionSchema = new mongoose.Schema({
   points: { type: Number, required: true },
   purchaseAmount: { type: Number, default: null },
   relatedRedemptionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Redemption', default: null },
+  // Legacy: set on earns from when shops could cap balances. Caps are gone,
+  // so new rows never set it; kept so old ledger rows still read correctly.
   pointsCapApplied: { type: Boolean, default: false }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 

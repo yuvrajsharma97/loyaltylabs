@@ -30,7 +30,6 @@ function toForm(config) {
     fixedPointsPerVisit: toFormValue(config.fixedPointsPerVisit),
     minPurchase: config.minPurchase ? toFormValue(config.minPurchase) : '',
     pointsExpiryDays: toFormValue(config.pointsExpiryDays),
-    maxPointsBalance: toFormValue(config.maxPointsBalance),
   };
 }
 
@@ -61,7 +60,6 @@ const LoyaltyConfig = () => {
       fixedPointsPerVisit: isPerCurrency ? null : validateNumber(form.fixedPointsPerVisit, NUMBER_RULES.pointsPerVisit),
       minPurchase: validateNumber(form.minPurchase, NUMBER_RULES.minPurchase),
       pointsExpiryDays: validateNumber(form.pointsExpiryDays, NUMBER_RULES.expiryDays),
-      maxPointsBalance: validateNumber(form.maxPointsBalance, NUMBER_RULES.maxBalance),
     };
     setErrors(nextErrors);
     if (hasErrors(nextErrors)) return;
@@ -74,7 +72,6 @@ const LoyaltyConfig = () => {
         fixedPointsPerVisit: isPerCurrency ? undefined : Number(form.fixedPointsPerVisit),
         minPurchase: Number(form.minPurchase) || 0,
         pointsExpiryDays: form.pointsExpiryDays ? Number(form.pointsExpiryDays) : null,
-        maxPointsBalance: form.maxPointsBalance ? Number(form.maxPointsBalance) : null,
       });
       setForm(toForm(updated));
       showSuccessToast('Earning rules updated.');
@@ -132,14 +129,6 @@ const LoyaltyConfig = () => {
         value={form.pointsExpiryDays}
         onChange={(event) => setField('pointsExpiryDays', sanitizeInteger(event.target.value, 4))}
         error={errors.pointsExpiryDays}
-      />
-      <Input
-        label="Maximum points balance (optional)"
-        inputMode="numeric"
-        placeholder="No limit"
-        value={form.maxPointsBalance}
-        onChange={(event) => setField('maxPointsBalance', sanitizeInteger(event.target.value))}
-        error={errors.maxPointsBalance}
       />
 
       <Button type="submit" isLoading={isSaving} className="self-start">

@@ -26,21 +26,15 @@ const CustomerQRScreen = () => {
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-4 py-10 text-center">
-      <h1 className="text-page-title text-text-primary">Your code</h1>
+      <h1 className="text-page-title text-text-primary">Your FuseCard</h1>
 
-      {error?.code === 'QR_NOT_ISSUED' ? (
-        <EmptyState
-          icon="lock"
-          title="Verify your email first"
-          body="Your code is issued once your email address is verified."
-        />
-      ) : error ? (
-        <EmptyState icon="error" title="Couldn't load your code" body={error.message} />
+      {error ? (
+        <EmptyState icon="error" title="Couldn't load your FuseCard" body={error.message} />
       ) : (
         <>
           <QRPanel qrToken={qrToken} />
           <p className="text-body-sm text-text-secondary">
-            Show this to the till to earn points or collect a reward.
+            Show your FuseCard at the till to earn points or collect a reward.
           </p>
 
           {user?.slug && (

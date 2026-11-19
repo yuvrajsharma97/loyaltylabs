@@ -8,7 +8,8 @@ import Input from '../../shared/components/Input';
 import PasswordInput from '../../shared/components/PasswordInput';
 import Button from '../../shared/components/Button';
 import SegmentedControl from '../../shared/components/SegmentedControl';
-import Icon from '../../shared/components/Icon';
+import PlanPicker from '../../shared/components/PlanPicker';
+import { DEFAULT_PLAN_ID, TRIAL_WEEKS, findPlan } from '../../shared/utils/plans';
 import {
   LIMITS,
   hasErrors,
@@ -36,10 +37,10 @@ const SignUpPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [plan, setPlan] = useState(findPlan(searchParams.get('plan'))?.id || DEFAULT_PLAN_ID);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRegistered, setIsRegistered] = useState(false);
 
   const isStore = accountKind === 'store';
 
@@ -70,7 +71,12 @@ const SignUpPage = () => {
     try {
       if (!isStore) {
         await authApi.registerCustomer({ name: name.trim(), email: cleanEmail, password, phone: cleanPhone });
-        setIsRegistered(true);
+        // Unverified customers can sign in and earn points; verifying is only
+        // needed to redeem, and the link is already in their inbox.
+        const session = await authApi.login({ email: cleanEmail, password, accountType: 'customer' });
+        await login(session);
+        showSuccessToast(`Welcome! We sent a verification link to ${cleanEmail}.`);
+        navigate('/');
       } else {
         await authApi.registerStore({
           ownerName: name.trim() || undefined,
@@ -78,6 +84,7 @@ const SignUpPage = () => {
           email: cleanEmail,
           password,
           phone: cleanPhone,
+          plan,
         });
         // Store-owner login isn't gated on email verification, so we can
         // sign them straight into onboarding instead of a "check your
@@ -92,30 +99,6 @@ const SignUpPage = () => {
       setIsSubmitting(false);
     }
   };
-
-  const handleResend = async () => {
-    await authApi.resendVerification({ email, accountType: 'customer' });
-    showSuccessToast('Verification email sent again.');
-  };
-
-  if (isRegistered) {
-    return (
-      <AuthCard title="Check your email">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Icon name="mail" className="text-primary" style={{ fontSize: '2rem' }} />
-          <p className="text-body text-text-secondary">
-            We sent a verification link to <strong>{email}</strong>. Follow it to activate your account.
-          </p>
-          <Button variant="secondary" onClick={handleResend}>
-            Resend email
-          </Button>
-          <Link to="/sign-in" className="text-body-sm text-primary">
-            Back to sign in
-          </Link>
-        </div>
-      </AuthCard>
-    );
-  }
 
   return (
     <AuthCard title="Create your account">
@@ -195,11 +178,27 @@ const SignUpPage = () => {
           error={fieldErrors.phone}
         />
 
+        {isStore && (
+          <div className="flex flex-col gap-1">
+            <PlanPicker value={plan} onChange={setPlan} />
+            <p className="text-body-sm text-text-secondary">
+              Your first {TRIAL_WEEKS} weeks are free. You can change plan any time in Settings.
+            </p>
+          </div>
+        )}
+
         {error && <p className="text-body-sm text-error-text">{error}</p>}
 
         <Button type="submit" isLoading={isSubmitting}>
-          Create account
+          {isStore ? `Start ${TRIAL_WEEKS} weeks free` : 'Create account'}
         </Button>
+        <p className="text-center text-body-sm text-text-muted">
+          By continuing, you agree to us using your details as described in our{' '}
+          <Link to="/privacy" className="text-primary">
+            privacy policy
+          </Link>
+          .
+        </p>
       </form>
 
       <p className="mt-6 text-center text-body-sm text-text-secondary">

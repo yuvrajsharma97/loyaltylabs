@@ -20,7 +20,7 @@ const MAX_OPEN_DISPUTES = 3;
  */
 const getMe = asyncHandler(async (req, res) => {
   const customer = await Customer.findById(req.auth.id).select(
-    'name email phone username slug avatarUrl authProvider emailVerified interests onboardingCompleted createdAt'
+    'name email phone username slug avatarUrl authProvider emailVerified interests onboardingCompleted pointsEarnedEmails createdAt'
   );
   if (!customer) {
     throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
@@ -55,6 +55,7 @@ const getMe = asyncHandler(async (req, res) => {
       emailVerified: customer.emailVerified,
       interests: customer.interests,
       onboardingCompleted: customer.onboardingCompleted,
+      pointsEarnedEmails: customer.pointsEarnedEmails,
       memberships
     }
   });
@@ -68,10 +69,11 @@ const getMe = asyncHandler(async (req, res) => {
  * @body {string} [phone]
  * @body {Array<'cafe'|'retail'|'services'|'other'>} [interests]
  * @body {boolean} [onboardingCompleted]
+ * @body {boolean} [pointsEarnedEmails] - opt in/out of "you earned points" emails
  */
 const updateMe = asyncHandler(async (req, res) => {
   const customer = await Customer.findByIdAndUpdate(req.auth.id, { $set: req.body }, { new: true }).select(
-    'name email phone username slug avatarUrl authProvider emailVerified interests onboardingCompleted'
+    'name email phone username slug avatarUrl authProvider emailVerified interests onboardingCompleted pointsEarnedEmails'
   );
   if (!customer) {
     throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
@@ -82,15 +84,16 @@ const updateMe = asyncHandler(async (req, res) => {
 
 /**
  * The customer's static QR identity token - always the same value (no TOTP
- * rotation; see loyaltylabs-design-decisions memory). Gated on email
- * verification so an unverified account has no QR at all.
+ * rotation; see loyaltylabs-design-decisions memory). Issued whether or not
+ * the email is verified: unverified customers can earn points, and only
+ * redeeming them (POST /redeem/initiate) requires a verified email.
  * @route GET /customers/me/qr-token
  * @access Private (customer)
  */
 const getQrToken = asyncHandler(async (req, res) => {
-  const customer = await Customer.findById(req.auth.id).select('emailVerified qrCodeToken');
-  if (!customer || !customer.emailVerified) {
-    throw new AppError('QR_NOT_ISSUED', 'Customer account not yet email-verified - no QR exists', 403);
+  const customer = await Customer.findById(req.auth.id).select('qrCodeToken');
+  if (!customer) {
+    throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
   }
 
   res.json({ success: true, data: { qrToken: customer.qrCodeToken } });

@@ -20,6 +20,7 @@ import EmptyState from '../../shared/components/EmptyState';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
 import Pagination from '../../shared/components/Pagination';
 import ScrollPanel from '../../shared/components/ScrollPanel';
+import VerifyEmailNotice from '../../shared/components/VerifyEmailNotice';
 import { usePaginatedList } from '../../shared/hooks/usePaginatedList';
 
 const REWARDS_PAGE_SIZE = 10;
@@ -31,8 +32,8 @@ const TABS = [
 ];
 
 const EARN_DESCRIPTION = {
-  per_currency: 'Earn points automatically for every pound you spend. Show your code at the till when you pay.',
-  per_visit: 'Earn a fixed number of points every time you visit. Show your code at the till on each visit.',
+  per_currency: 'Earn points automatically for every pound you spend. Show your FuseCard at the till when you pay.',
+  per_visit: 'Earn a fixed number of points every time you visit. Show your FuseCard at the till on each visit.',
 };
 
 // "Stamps" aren't a backend concept - a cosmetic progress view of the real
@@ -127,6 +128,11 @@ const StoreDetail = () => {
       await refreshProfile();
     } catch (err) {
       setRedeemStatus('idle');
+      if (err.code === 'EMAIL_NOT_VERIFIED') {
+        // Our copy of the profile was out of date; refresh it so the verify notice shows.
+        setRedeemingReward(null);
+        await refreshProfile();
+      }
       showErrorToast(err.message);
     }
   };
@@ -212,6 +218,10 @@ const StoreDetail = () => {
         </Card>
       )}
 
+      {isMember && user && !user.emailVerified && (
+        <VerifyEmailNotice email={user.email} className="mt-3" />
+      )}
+
       <SegmentedControl options={TABS} value={tab} onChange={setTab} className="mt-5" />
 
       <div className="mt-5">
@@ -237,6 +247,7 @@ const StoreDetail = () => {
                       reward={reward}
                       pointsBalance={pointsBalance}
                       isMember={isMember}
+                      isVerified={Boolean(user?.emailVerified)}
                       onRedeem={openRedeemConfirm}
                     />
                   ))}

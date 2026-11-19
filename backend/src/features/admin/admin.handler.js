@@ -9,10 +9,13 @@ const Store = require('../stores/store.model');
 const Customer = require('../customers/customer.model');
 const Membership = require('../memberships/membership.model');
 const PointTransaction = require('../transactions/transaction.model');
-const Redemption = require('../redemptions/redemption.model');
 const Dispute = require('../disputes/dispute.model');
 const { StoreBilling, UsageSnapshot } = require('../billing/billing.model');
+const { describeBilling } = require('../billing/billing.service');
+const { cancelPendingRedemptions } = require('../redemptions/redemption.service');
 const ReconciliationLog = require('./reconciliationLog.model');
+const { transactionReportQuerySchema } = require('./admin.validation');
+const { buildTransactionReport, rangeDays, MAX_RANGE_DAYS } = require('./transactionReport.service');
 
 /**
  * All stores platform-wide, regardless of discoverable/status (unlike the
@@ -26,7 +29,7 @@ const ReconciliationLog = require('./reconciliationLog.model');
  */
 const listStores = asyncHandler(async (req, res) => {
   const filter = {};
-  if (req.query.status === 'active' || req.query.status === 'suspended') {
+  if (['active', 'suspended', 'closed'].includes(req.query.status)) {
     filter.status = req.query.status;
   }
   if (req.query.search) {
@@ -66,6 +69,9 @@ const updateStoreStatus = asyncHandler(async (req, res) => {
   }
 
   const previousStatus = store.status;
+  if (previousStatus === 'closed') {
+    throw new AppError('STORE_CLOSED', 'This shop was closed by its owner and cannot be reactivated', 409);
+  }
   if (previousStatus === status) {
     return res.json({ success: true, data: { id: store._id, status: store.status } });
   }
@@ -74,53 +80,21 @@ const updateStoreStatus = asyncHandler(async (req, res) => {
   try {
     await session.withTransaction(async () => {
       if (status === 'suspended') {
-        const pendingRedemptions = await Redemption.find({ storeId: store._id, status: 'pending' }).session(
-          session
-        );
-
-        for (const redemption of pendingRedemptions) {
-          const cancelled = await Redemption.findOneAndUpdate(
-            { _id: redemption._id, status: 'pending' },
-            { $set: { status: 'cancelled' } },
-            { session, new: true }
-          );
-          if (!cancelled) continue; // fulfilled/cancelled elsewhere already - don't double-restore
-
-          await Membership.updateOne(
-            { customerId: cancelled.customerId, storeId: cancelled.storeId },
-            { $inc: { pointsBalance: cancelled.pointsSpent } },
-            { session }
-          );
-          await PointTransaction.create(
-            [{
-              storeId: cancelled.storeId,
-              customerId: cancelled.customerId,
-              type: 'suspension_reversal',
-              points: cancelled.pointsSpent,
-              relatedRedemptionId: cancelled._id
-            }],
-            { session }
-          );
-        }
+        await cancelPendingRedemptions({ storeId: store._id }, { session, refund: true });
 
         const billing = await StoreBilling.findOne({ storeId: store._id }).session(session);
-        if (billing) {
-          const cutoff = new Date(Date.now() - billing.activeWindowDays * 24 * 60 * 60 * 1000);
-          const activeCustomerCount = await Membership.countDocuments({
-            storeId: store._id,
-            lastActivityAt: { $ne: null, $gte: cutoff }
-          }).session(session);
-          const billableCount = Math.max(activeCustomerCount - billing.freeUserLimit, 0);
-          const amountDue = billableCount * billing.pricePerExtraUser;
+        if (billing && billing.plan) {
+          const usage = await describeBilling(billing, session);
 
           await UsageSnapshot.create(
             [{
               storeId: store._id,
               periodStart: billing.currentBillingPeriodStart,
               periodEnd: new Date(),
-              activeCustomerCount,
-              billableCount,
-              amountDue,
+              plan: usage.plan,
+              activeCustomerCount: usage.activeCustomerCount,
+              customerLimit: usage.customerLimit,
+              amountDue: usage.amountDue,
               proRated: true,
               status: 'invoiced'
             }],
@@ -394,7 +368,45 @@ const getCustomer = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Every transaction between two UK dates, compiled per day and per shop:
+ * counts of each type (points earned, rewards claimed, rewards handed over
+ * at the till, cancellations, refunds, adjustments, expiries), points in and
+ * out, customer spend and unique customers. Days with no activity included.
+ * @route GET /admin/reports/transactions
+ * @access Private (super_admin)
+ * @query {string} from - YYYY-MM-DD, UK time
+ * @query {string} to - YYYY-MM-DD, UK time, inclusive
+ * @query {string} [storeId] - one shop only
+ */
+const getTransactionReport = asyncHandler(async (req, res) => {
+  const parsed = transactionReportQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError('VALIDATION_ERROR', 'Report dates are invalid', 400, {
+      errors: parsed.error.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message }))
+    });
+  }
+  const { from, to, storeId } = parsed.data;
+
+  if (rangeDays(from, to) > MAX_RANGE_DAYS) {
+    throw new AppError('REPORT_RANGE_TOO_LONG', `Pick a range of ${MAX_RANGE_DAYS} days or fewer`, 400, {
+      maxDays: MAX_RANGE_DAYS
+    });
+  }
+  if (storeId && !isValidObjectId(storeId)) {
+    throw new AppError('STORE_NOT_FOUND', 'Store not found', 404);
+  }
+
+  const report = await buildTransactionReport({
+    from,
+    to,
+    storeId: storeId ? new mongoose.Types.ObjectId(storeId) : null
+  });
+  res.json({ success: true, data: report });
+});
+
 module.exports = {
+  getTransactionReport,
   listStores,
   updateStoreStatus,
   getMetrics,

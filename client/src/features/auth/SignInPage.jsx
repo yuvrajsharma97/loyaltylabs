@@ -47,10 +47,6 @@ const SignInPage = () => {
       await login(session);
       navigate('/');
     } catch (err) {
-      if (err.code === 'EMAIL_NOT_VERIFIED') {
-        navigate(`/verify-email?email=${encodeURIComponent(email)}&accountType=customer`);
-        return;
-      }
       setError(err.message);
     } finally {
       setIsSubmitting(false);
@@ -64,6 +60,12 @@ const SignInPage = () => {
       await login(session);
       navigate('/');
     } catch (err) {
+      // Google didn't confirm this address, so sign-up finishes by email:
+      // the server has just sent the verification link.
+      if (err.code === 'EMAIL_NOT_VERIFIED' && err.details?.email) {
+        navigate(`/verify-email?email=${encodeURIComponent(err.details.email)}&accountType=customer`);
+        return;
+      }
       setError(err.message);
     }
   };

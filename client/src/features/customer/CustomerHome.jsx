@@ -16,6 +16,7 @@ import SegmentedControl from '../../shared/components/SegmentedControl';
 import BalanceDisplay from '../../shared/components/BalanceDisplay';
 import StoreCard from '../../shared/components/StoreCard';
 import LoadingSpinner from '../../shared/components/LoadingSpinner';
+import VerifyEmailNotice from '../../shared/components/VerifyEmailNotice';
 
 const SHOP_TABS = [
   { value: 'mine', label: 'Your shops' },
@@ -48,25 +49,21 @@ const LoyaltyCardPanel = () => {
 
   return (
     <Card className="flex flex-col items-center gap-3 text-center">
-      <h2 className="text-card-title text-text-primary">Your loyalty card</h2>
+      <h2 className="text-card-title text-text-primary">Your FuseCard</h2>
       {qrError ? (
-        <p className="text-body-sm text-text-secondary">
-          {qrError.code === 'QR_NOT_ISSUED'
-            ? 'Verify your email to activate your loyalty code.'
-            : qrError.message}
-        </p>
+        <p className="text-body-sm text-text-secondary">{qrError.message}</p>
       ) : !qrToken ? (
         <LoadingSpinner className="py-8" />
       ) : (
         <Link
           to="/customer/scan"
-          aria-label="Open your code full screen"
+          aria-label="Open your FuseCard full screen"
           className="rounded-card border border-dashed border-border-strong bg-surface p-3 transition-transform duration-150 hover:scale-[1.02]"
         >
           <QRCodeSVG value={qrToken} size={148} fgColor="#1C1F16" bgColor="#FFFFFF" />
         </Link>
       )}
-      <p className="text-body-sm text-text-secondary">Scan at the till to earn points or collect a reward.</p>
+      <p className="text-body-sm text-text-secondary">Scan your FuseCard at the till to earn points or collect a reward.</p>
     </Card>
   );
 };
@@ -119,6 +116,7 @@ const CustomerHome = () => {
     <div className="mx-auto max-w-5xl px-4 py-6">
       <h1 className="text-page-title text-text-primary">Hi {user?.name?.split(' ')[0]}</h1>
       <p className="mt-1 text-body-sm text-text-secondary">Here&apos;s where you stand at every shop.</p>
+      {user && !user.emailVerified && <VerifyEmailNotice email={user.email} compact className="mt-4" />}
 
       {/* minmax(0,1fr) so wide content can't stretch the column past the screen on phones. */}
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 rail:grid-cols-[minmax(0,1fr)_340px]">

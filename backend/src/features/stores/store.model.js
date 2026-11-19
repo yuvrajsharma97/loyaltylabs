@@ -12,15 +12,17 @@ const storeSchema = new mongoose.Schema({
   // ("Cafe", "Services", "Retail") on directory listings that had no backing
   // field until now. Also what customer.interests matches against.
   category: { type: String, enum: ['cafe', 'retail', 'services', 'other'], default: 'other' },
-  status: { type: String, enum: ['active', 'suspended'], default: 'active' },
+  // 'closed' = the owner deleted their account. Permanent: admins can't reactivate it.
+  status: { type: String, enum: ['active', 'suspended', 'closed'], default: 'active' },
+  closedAt: { type: Date, default: null },
   discoverable: { type: Boolean, default: true },
   loyaltyProgram: {
     mode: { type: String, enum: ['per_currency', 'per_visit'], default: 'per_currency' },
     pointsPerUnit: { type: Number, default: 1 },
     fixedPointsPerVisit: { type: Number, default: 0 },
     minPurchase: { type: Number, default: 0 },
-    pointsExpiryDays: { type: Number, default: null },
-    maxPointsBalance: { type: Number, default: null } // null = platform hard ceiling of 1,000,000
+    pointsExpiryDays: { type: Number, default: null }
+    // No maxPointsBalance: customer balances are uncapped.
   },
   tillPins: [
     {

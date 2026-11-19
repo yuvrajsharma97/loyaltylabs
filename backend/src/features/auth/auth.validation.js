@@ -7,6 +7,7 @@ const {
   personNameField,
   titleField
 } = require('../../shared/utils/zodHelpers');
+const { planField } = require('../billing/billing.validation');
 
 // Strength is checked in the handlers (shared/utils/passwordStrength.js); this
 // just caps the length so an enormous string never reaches bcrypt.
@@ -47,7 +48,9 @@ const registerStoreSchema = z.object({
   storeName: titleField('storeName').optional(),
   email: emailField(),
   password: passwordField('password'),
-  phone: phoneField().optional()
+  phone: phoneField().optional(),
+  // Owners pick a plan at sign-up; the free trial runs on it.
+  plan: planField()
 });
 
 const loginSchema = z.object({
@@ -98,7 +101,15 @@ const changePasswordSchema = z.object({
   refreshToken: z.string().optional()
 });
 
+// Deleting an account needs the password, or (for a Google-only customer,
+// who has none) the account's email typed out again.
+const deleteAccountSchema = z.object({
+  password: z.string().max(128).optional(),
+  confirmEmail: z.string().trim().toLowerCase().max(254).optional()
+});
+
 module.exports = {
+  deleteAccountSchema,
   registerCustomerSchema,
   verifyEmailSchema,
   resendVerificationSchema,

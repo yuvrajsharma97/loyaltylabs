@@ -8,6 +8,12 @@ export function updateStoreStatus(storeId, status) {
   return apiClient.patch(`/dashboard/admin/stores/${storeId}/status`, { status });
 }
 
+// Every transaction between two UK dates (YYYY-MM-DD, inclusive), compiled
+// per day and per shop.
+export function getTransactionReport({ from, to, storeId }) {
+  return apiClient.get('/dashboard/admin/reports/transactions', { params: { from, to, storeId } });
+}
+
 export function getMetrics() {
   return apiClient.get('/dashboard/admin/metrics');
 }

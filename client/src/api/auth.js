@@ -4,8 +4,8 @@ export function registerCustomer({ name, email, password, phone }) {
   return apiClient.post('/auth/register/customer', { name, email, password, phone });
 }
 
-export function registerStore({ ownerName, storeName, email, password, phone }) {
-  return apiClient.post('/auth/register/store', { ownerName, storeName, email, password, phone });
+export function registerStore({ ownerName, storeName, email, password, phone, plan }) {
+  return apiClient.post('/auth/register/store', { ownerName, storeName, email, password, phone, plan });
 }
 
 export function login({ email, password, accountType }) {
@@ -51,6 +51,12 @@ export function getAccount() {
 
 export function updateAccount({ name, phone }) {
   return apiClient.patch('/auth/account', { name, phone });
+}
+
+// Permanently closes the signed-in account (and, for an owner, their shop).
+// Confirmed with the password, or the email for a Google-only customer.
+export function deleteAccount({ password, confirmEmail }) {
+  return apiClient.delete('/auth/account', { data: { password, confirmEmail } });
 }
 
 // Signs out every other session; refreshToken keeps the current one.
