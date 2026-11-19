@@ -21,7 +21,7 @@ const crypto = require('crypto');
 const { connectDB } = require('../src/config/db');
 const { generateSlug } = require('../src/shared/utils/slugGenerator');
 const { generateQrCodeToken, generateQrSalt } = require('../src/shared/utils/qrSigning');
-const { calculatePoints } = require('../src/shared/services/calculatePoints');
+const { calculatePoints, applyPointsCap } = require('../src/shared/services/calculatePoints');
 
 const User = require('../src/features/auth/auth.model');
 const Customer = require('../src/features/customers/customer.model');
@@ -32,8 +32,6 @@ const PointTransaction = require('../src/features/transactions/transaction.model
 const Redemption = require('../src/features/redemptions/redemption.model');
 const Dispute = require('../src/features/disputes/dispute.model');
 const { StoreBilling, UsageSnapshot } = require('../src/features/billing/billing.model');
-const { getPlan, addInterval, TRIAL_DAYS } = require('../src/features/billing/billing.plans');
-const { newTrialBilling } = require('../src/features/billing/billing.service');
 const ReconciliationLog = require('../src/features/admin/reconciliationLog.model');
 const RefreshToken = require('../src/features/auth/refreshToken.model');
 
@@ -64,15 +62,15 @@ function sample(arr, count) {
 }
 
 // Optional per-store flags, each there to exercise a specific screen/state:
-//   pointsExpiryDays - earning rules with expiry (and 'expiry' ledger rows)
-//   plan - billing plan (default 'one_shop'); trialing - still inside the free trial
+//   pointsExpiryDays / maxPointsBalance - earning rules with expiry + cap (and 'expiry' ledger rows)
+//   freeUserLimit - low limit so /billing/usage shows a non-zero billable count
 //   isNew - brand-new store: onboarding incomplete, no rewards/PINs/billing (BILLING_NOT_SETUP), no members
 const STORE_DEFS = [
-  { name: 'The Daily Grind Cafe', category: 'cafe', mode: 'per_currency', pointsPerUnit: 2, minPurchase: 3, pointsExpiryDays: 180, plan: 'three_shops' },
-  { name: 'Urban Cuts Barber', category: 'services', mode: 'per_visit', fixedPointsPerVisit: 10, minPurchase: 0, trialing: true },
-  { name: 'Green Leaf Grocers', category: 'retail', mode: 'per_currency', pointsPerUnit: 1, minPurchase: 5 },
+  { name: 'The Daily Grind Cafe', category: 'cafe', mode: 'per_currency', pointsPerUnit: 2, minPurchase: 3, pointsExpiryDays: 180, freeUserLimit: 5 },
+  { name: 'Urban Cuts Barber', category: 'services', mode: 'per_visit', fixedPointsPerVisit: 10, minPurchase: 0 },
+  { name: 'Green Leaf Grocers', category: 'retail', mode: 'per_currency', pointsPerUnit: 1, minPurchase: 5, maxPointsBalance: 500 },
   { name: 'Bloom & Petal Florist', category: 'retail', mode: 'per_currency', pointsPerUnit: 1.5, minPurchase: 0 },
-  { name: 'The Book Nook', category: 'retail', mode: 'per_currency', pointsPerUnit: 1, minPurchase: 0, plan: 'five_shops' },
+  { name: 'The Book Nook', category: 'retail', mode: 'per_currency', pointsPerUnit: 1, minPurchase: 0 },
   { name: 'Sunset Yoga Studio', category: 'services', mode: 'per_visit', fixedPointsPerVisit: 15, minPurchase: 0 },
   { name: 'Pixel Perfect Print Shop', category: 'services', mode: 'per_currency', pointsPerUnit: 1, minPurchase: 2 },
   { name: 'The Corner Bakery', category: 'cafe', mode: 'per_currency', pointsPerUnit: 2, minPurchase: 2 },
@@ -193,7 +191,8 @@ async function createStoresWithOwners() {
         pointsPerUnit: def.pointsPerUnit || 1,
         fixedPointsPerVisit: def.fixedPointsPerVisit || 0,
         minPurchase: def.minPurchase || 0,
-        pointsExpiryDays: def.pointsExpiryDays || null
+        pointsExpiryDays: def.pointsExpiryDays || null,
+        maxPointsBalance: def.maxPointsBalance || null
       },
       tillPins: def.isNew
         ? []
@@ -212,22 +211,14 @@ async function createStoresWithOwners() {
       continue;
     }
 
-    const planId = def.plan || 'one_shop';
-    let billingFields;
-    if (def.trialing) {
-      billingFields = newTrialBilling(store._id, planId, daysAgo(10));
-    } else {
-      const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-      billingFields = {
-        storeId: store._id,
-        plan: planId,
-        trialEndsAt: daysAgo(TRIAL_DAYS + 30),
-        currentBillingPeriodStart: periodStart,
-        currentBillingPeriodEnd: addInterval(periodStart, getPlan(planId).interval),
-        status: isSuspended ? 'past_due' : 'active'
-      };
-    }
-    const billing = await StoreBilling.create(billingFields);
+    const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const billing = await StoreBilling.create({
+      storeId: store._id,
+      freeUserLimit: def.freeUserLimit || 100,
+      currentBillingPeriodStart: periodStart,
+      currentBillingPeriodEnd: new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1),
+      status: isSuspended ? 'past_due' : 'active'
+    });
 
     const rewards = await Reward.insertMany(
       REWARD_DEFS.map((r) => ({
@@ -328,8 +319,13 @@ async function buildActivity(storeRecords, customers) {
       const visitCount = randomInt(3, 8);
       for (let v = 0; v < visitCount; v++) {
         const purchaseAmount = randomInt(5, 60);
-        const pointsAwarded = calculatePoints(purchaseAmount, store.loyaltyProgram);
-        balance += pointsAwarded;
+        const rawPoints = calculatePoints(purchaseAmount, store.loyaltyProgram);
+        const { pointsAwarded, pointsCapApplied, newBalance } = applyPointsCap(
+          balance,
+          rawPoints,
+          store.loyaltyProgram.maxPointsBalance
+        );
+        balance = newBalance;
         const createdAt = daysAgo(randomInt(0, 44));
         if (createdAt > lastActivityAt) lastActivityAt = createdAt;
 
@@ -341,7 +337,8 @@ async function buildActivity(storeRecords, customers) {
           verificationMethod: pick(['qr_scan', 'slug_manual']),
           type: 'earn',
           points: pointsAwarded,
-          purchaseAmount
+          purchaseAmount,
+          pointsCapApplied
         });
         backdatedTransactions.push({ id: txn._id, createdAt });
 
@@ -511,19 +508,19 @@ async function createUsageHistory(storeRecords) {
   const now = new Date();
 
   for (const { store, billing } of storeRecords) {
-    if (!billing || billing.status === 'trialing') continue; // no closed periods yet
+    if (!billing) continue;
     for (let monthsBack = 3; monthsBack >= 1; monthsBack--) {
       const periodStart = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
       const periodEnd = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1);
-      const plan = getPlan(billing.plan);
+      const activeCustomerCount = randomInt(3, 14);
+      const billableCount = Math.max(activeCustomerCount - billing.freeUserLimit, 0);
       snapshots.push({
         storeId: store._id,
         periodStart,
         periodEnd,
-        plan: plan.id,
-        activeCustomerCount: randomInt(3, 14),
-        customerLimit: plan.customerLimit,
-        amountDue: plan.price,
+        activeCustomerCount,
+        billableCount,
+        amountDue: billableCount * billing.pricePerExtraUser,
         status: monthsBack === 1 ? 'invoiced' : 'paid'
       });
     }

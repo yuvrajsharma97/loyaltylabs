@@ -18,7 +18,8 @@ const updateLoyaltyConfigSchema = z
     pointsPerUnit: z.number().min(0.01).max(1000).optional(),
     fixedPointsPerVisit: z.number().int().min(1).max(10000).optional(),
     minPurchase: z.number().min(0).max(10000).optional(),
-    pointsExpiryDays: z.number().int().min(1).max(3650).nullable().optional()
+    pointsExpiryDays: z.number().int().min(1).max(3650).nullable().optional(),
+    maxPointsBalance: z.number().int().positive().max(1000000).nullable().optional()
   })
   .refine((data) => Object.keys(data).length > 0, { error: 'At least one field must be provided' });
 

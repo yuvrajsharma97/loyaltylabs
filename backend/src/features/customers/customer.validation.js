@@ -12,8 +12,7 @@ const updateProfileSchema = z
     name: personNameField('name').optional(),
     phone: phoneField().optional(),
     interests: z.array(z.enum(['cafe', 'retail', 'services', 'other'])).optional(),
-    onboardingCompleted: z.boolean().optional(),
-    pointsEarnedEmails: z.boolean().optional()
+    onboardingCompleted: z.boolean().optional()
   })
   .refine((data) => Object.keys(data).length > 0, { error: 'At least one field must be provided' });
 

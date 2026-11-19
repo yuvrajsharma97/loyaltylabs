@@ -9,7 +9,3 @@ export function getUsage(storeId) {
 export function getHistory(storeId, { page, limit } = {}) {
   return apiClient.get('/dashboard/store/billing/history', { params: { storeId, page, limit } });
 }
-
-export function changePlan(storeId, plan) {
-  return apiClient.patch('/dashboard/store/billing/plan', { plan }, { params: { storeId } });
-}

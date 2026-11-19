@@ -1,150 +1,64 @@
-# ─────────────────────────────────────────────
 # Dependencies
-# ─────────────────────────────────────────────
 node_modules/
 .pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-.pnpm-store/
-jspm_packages/
-bower_components/
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
 
-# Empty root lockfile (there is no root package.json; each app has its own)
-/package-lock.json
-
-# ─────────────────────────────────────────────
-# Environment variables & secrets
-# ─────────────────────────────────────────────
+# Environment variables
 .env
 .env.*
-*.env
 !.env.example
-!**/.env.example
-# e.g. backend/loyaltylabs.env, backend/.env.development, client/.env
+.env.development
+.env.production
+# Any other env file, e.g. backend/loyaltylabs.env (production secrets).
+*.env
 
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-*.keystore
-id_rsa*
-service-account*.json
-credentials*.json
-secrets*.json
 
-# ─────────────────────────────────────────────
 # Logs
-# ─────────────────────────────────────────────
-logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+logs/
 
-# ─────────────────────────────────────────────
 # Build output
-# ─────────────────────────────────────────────
 dist/
 dist-ssr/
 build/
-out/
 *.local
-*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.nyc_output/
 
 # Vite
 .vite/
 .vite-temp/
-vite.config.*.timestamp-*
 
-# Deployment platforms
-.vercel/
-.netlify/
-.railway/
-
-# ─────────────────────────────────────────────
-# Caches
-# ─────────────────────────────────────────────
-.cache/
-.parcel-cache/
-.eslintcache
-.stylelintcache
-.npm/
-.node_repl_history
-*.tgz
-.temp/
-.tmp/
-tmp/
-
-# ─────────────────────────────────────────────
-# Test / coverage
-# ─────────────────────────────────────────────
-coverage/
-.nyc_output/
-junit.xml
-test-results/
-playwright-report/
-playwright/.cache/
-
-# ─────────────────────────────────────────────
-# Local database / data dumps
-# ─────────────────────────────────────────────
-*.sqlite
-*.sqlite3
-*.db
-dump/
-*.bson
-*.archive
-
-# ─────────────────────────────────────────────
 # Editors / IDEs
-# ─────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 .idea/
-*.iml
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-*~
-.history/
 
-# ─────────────────────────────────────────────
 # OS files
-# ─────────────────────────────────────────────
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
 Thumbs.db
-ehthumbs.db
 desktop.ini
-$RECYCLE.BIN/
 
-# ─────────────────────────────────────────────
-# AI / agent tooling (local only)
-# ─────────────────────────────────────────────
-.claude/
-.agents/
-.ua/
-skills-lock.json
-CLAUDE.local.md
-
-# ─────────────────────────────────────────────
-# Local notes, business docs & design references
-# ─────────────────────────────────────────────
+# Local notes / docs not meant for the repo
 notforgit/
-/founder/
-/founder-run1/
+
+# Design reference files (mockups, design-system source, uploads)
 /Design component landing Hero section/
 /Design system foundations needed/
+
+# Claude
+.claude

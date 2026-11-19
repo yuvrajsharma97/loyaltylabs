@@ -31,6 +31,7 @@ export const NUMBER_RULES = {
   pointsPerVisit: { label: 'Points per visit', min: 1, max: 10000, integer: true },
   minPurchase: { label: 'Minimum purchase', min: 0, max: 10000, required: false },
   expiryDays: { label: 'Expiry', min: 1, max: 3650, integer: true, required: false },
+  maxBalance: { label: 'Maximum balance', min: 1, max: 1000000, integer: true, required: false },
   rewardPoints: { label: 'Points required', min: 1, max: 1000000, integer: true },
   percentOff: { label: 'Percent off', min: 1, max: 100, integer: true },
   amountOff: { label: 'Amount off', min: 0.01, max: 10000 },

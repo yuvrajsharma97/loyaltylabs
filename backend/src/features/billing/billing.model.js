@@ -1,38 +1,29 @@
 const mongoose = require('mongoose');
-const { STORED_PLAN_IDS, ACTIVE_WINDOW_DAYS } = require('./billing.plans');
 
-// storeBilling - created together with the store at registration (the owner
-// picks a plan at sign-up and starts a TRIAL_DAYS free trial on it). Stores
-// registered before plans existed have no record until the owner picks a plan
-// via PATCH /billing/plan, so BILLING_NOT_SETUP stays a surfaceable state.
-// Price and customer limit are not stored here - they're derived from `plan`
-// via billing.plans.js so a price change applies everywhere at once.
+// storeBilling - not auto-created at store registration. BILLING_NOT_SETUP
+// is an expected, surfaceable state for a freshly created store (per
+// ERROR_CODES.md) until a separate (not-yet-built) setup flow creates one.
 const storeBillingSchema = new mongoose.Schema({
   storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true, unique: true },
-  plan: { type: String, enum: STORED_PLAN_IDS, required: true },
-  trialEndsAt: { type: Date, default: null },
-  activeWindowDays: { type: Number, default: ACTIVE_WINDOW_DAYS },
+  freeUserLimit: { type: Number, default: 100 },
+  pricePerExtraUser: { type: Number, default: 1.0 }, // GBP
+  activeWindowDays: { type: Number, default: 90 },
   currentBillingPeriodStart: { type: Date, required: true },
   currentBillingPeriodEnd: { type: Date, required: true },
-  status: { type: String, enum: ['trialing', 'active', 'past_due', 'suspended', 'cancelled'], default: 'trialing' },
-  // Set when the store first hits its plan's customer limit (drives the
-  // immediate limit email) and cleared once it's back under or upgrades.
-  limitReachedAt: { type: Date, default: null },
-  lastLimitEmailAt: { type: Date, default: null },
+  status: { type: String, enum: ['active', 'past_due', 'suspended'], default: 'active' },
   stripeCustomerId: { type: String, default: null },
   stripeSubscriptionItemId: { type: String, default: null }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
-// usageSnapshots - one per closed billing period, written by the
-// (not-yet-built) metering job and by suspension in admin.handler.
-// amountDue is the plan's flat price (0 for a period spent in trial).
+// usageSnapshots - written by the (not-yet-built) BullMQ metering job.
+// activeCustomerCount = memberships where lastActivityAt is non-null AND
+// within activeWindowDays.
 const usageSnapshotSchema = new mongoose.Schema({
   storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
   periodStart: { type: Date, required: true },
   periodEnd: { type: Date, required: true },
-  plan: { type: String, enum: STORED_PLAN_IDS, required: true },
   activeCustomerCount: { type: Number, required: true },
-  customerLimit: { type: Number, default: null }, // null = unlimited
+  billableCount: { type: Number, required: true }, // max(activeCustomerCount - freeUserLimit, 0)
   amountDue: { type: Number, required: true },
   proRated: { type: Boolean, default: false },
   status: { type: String, enum: ['pending', 'invoiced', 'paid'], default: 'pending' }

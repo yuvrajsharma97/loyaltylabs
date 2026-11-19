@@ -33,15 +33,7 @@ const customerSchema = new mongoose.Schema({
   // Set during customer onboarding - matched against store.category to
   // highlight relevant shops in the directory-join step.
   interests: [{ type: String, enum: ['cafe', 'retail', 'services', 'other'] }],
-  onboardingCompleted: { type: Boolean, default: false },
-
-  // Email preference: a "you earned points" email after each till scan.
-  // On by default; the customer can switch it off in account settings.
-  pointsEarnedEmails: { type: Boolean, default: true },
-
-  // Set when the customer deletes their account. The record stays, anonymised,
-  // so the points ledger still adds up; see auth/accountDeletion.service.js.
-  deletedAt: { type: Date, default: null }
+  onboardingCompleted: { type: Boolean, default: false }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 module.exports = mongoose.model('Customer', customerSchema);

@@ -20,22 +20,13 @@ const {
   passwordResetEmail,
   recoverAccountEmail,
   loginNotificationEmail,
-  welcomeEmail,
-  accountDeletedEmail
+  welcomeEmail
 } = require('./auth.emailTemplates');
-const writeAuditLog = require('../../shared/services/writeAuditLog');
-const {
-  deleteCustomerAccount,
-  deleteStoreOwnerAccount,
-  RETENTION_DAYS
-} = require('./accountDeletion.service');
 
 const User = require('./auth.model');
 const RefreshToken = require('./refreshToken.model');
 const Customer = require('../customers/customer.model');
 const Store = require('../stores/store.model');
-const { StoreBilling } = require('../billing/billing.model');
-const { newTrialBilling } = require('../billing/billing.service');
 
 const googleClient = new OAuth2Client(env.googleClientId);
 
@@ -82,29 +73,9 @@ async function issueTokenPair({ id, type, role }) {
   return { accessToken, refreshToken };
 }
 
-// Issue a fresh verification token (replacing any earlier one) and email the
-// link. Shared by email sign-up, resend, and Google sign-ups whose address
-// Google hasn't confirmed.
-async function sendVerificationLink(account, accountType) {
-  const { rawToken, hashedToken, expiresAt } = issueHashedToken(env.emailVerificationExpiresInMs);
-  account.emailVerificationToken = hashedToken;
-  account.emailVerificationExpiresAt = expiresAt;
-  await account.save();
-
-  await sendEmail({
-    to: account.email,
-    ...verificationEmail({
-      name: account.name,
-      url: `${env.appUrl}/verify-email?token=${rawToken}&accountType=${accountType}`,
-      expiresInHours: env.emailVerificationExpiresInMs / (60 * 60 * 1000)
-    })
-  });
-}
-
 /**
  * Register a new customer account. Creates the customer with emailVerified:false
- * and sends a verification email. The customer can sign in and earn points
- * straight away; redeeming rewards waits until the email is verified.
+ * and sends a verification email; account is otherwise unusable until verified.
  * @route POST /auth/register/customer
  * @access Public (IP rate-limited)
  * @body {string} name
@@ -223,7 +194,19 @@ const resendVerification = asyncHandler(async (req, res) => {
     return res.json({ success: true, data: { sent: true } });
   }
 
-  await sendVerificationLink(account, accountType);
+  const { rawToken, hashedToken, expiresAt } = issueHashedToken(env.emailVerificationExpiresInMs);
+  account.emailVerificationToken = hashedToken;
+  account.emailVerificationExpiresAt = expiresAt;
+  await account.save();
+
+  await sendEmail({
+    to: account.email,
+    ...verificationEmail({
+      name: account.name,
+      url: `${env.appUrl}/verify-email?token=${rawToken}&accountType=${accountType}`,
+      expiresInHours: env.emailVerificationExpiresInMs / (60 * 60 * 1000)
+    })
+  });
 
   res.json({ success: true, data: { sent: true } });
 });
@@ -274,10 +257,9 @@ const recoverQr = asyncHandler(async (req, res) => {
  * @body {string} email
  * @body {string} password
  * @body {string} [phone]
- * @body {'one_shop'|'three_shops'|'five_shops'} plan - starts the free trial on this plan
  */
 const registerStore = asyncHandler(async (req, res) => {
-  const { email, password, phone, plan } = req.body;
+  const { email, password, phone } = req.body;
   const emailPrefix = email.split('@')[0];
   const ownerName = req.body.ownerName || emailPrefix;
   const storeName = req.body.storeName || `${emailPrefix}'s Store`;
@@ -316,7 +298,6 @@ const registerStore = asyncHandler(async (req, res) => {
         { session }
       );
       [store] = await Store.create([{ name: storeName, ownerUserId: owner._id }], { session });
-      await StoreBilling.create([newTrialBilling(store._id, plan)], { session });
     });
   } finally {
     session.endSession();
@@ -337,7 +318,7 @@ const registerStore = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    data: { userId: owner._id, storeId: store._id, name: owner.name, storeName: store.name, plan }
+    data: { userId: owner._id, storeId: store._id, name: owner.name, storeName: store.name }
   });
 });
 
@@ -366,6 +347,10 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError('INVALID_CREDENTIALS', 'Email or password is incorrect', 401);
   }
 
+  if (accountType === 'customer' && !account.emailVerified) {
+    throw new AppError('EMAIL_NOT_VERIFIED', 'Account exists but email not verified', 403);
+  }
+
   const role = accountType === 'user' ? account.role : 'customer';
   const tokens = await issueTokenPair({ id: account._id, type: accountType, role });
   await sendLoginNotification(account);
@@ -377,12 +362,8 @@ const login = asyncHandler(async (req, res) => {
  * Log in / sign up a customer via Google Identity Services. Customers only -
  * store owners/super admins are local email+password only.
  * Google's `email_verified` claim satisfies the same trust requirement as
- * the emailVerificationToken flow, so a Google customer whose address Google
- * has confirmed is auto-verified and signed straight in.
- * If Google hasn't confirmed the address (rare - e.g. some custom domains),
- * verification happens as part of sign-up: we email our own link and don't
- * sign them in until it's been followed. (Email/password sign-ups differ on
- * purpose: they're signed in straight away and verify later to redeem.)
+ * the emailVerificationToken flow, so a Google customer is auto-verified
+ * and never goes through /auth/verify-email.
  * @route POST /auth/google
  * @access Public
  * @body {string} idToken - Google ID token from the frontend SDK
@@ -406,16 +387,6 @@ const google = asyncHandler(async (req, res) => {
   if (!customer) {
     customer = await Customer.findOne({ email: payload.email });
     if (customer) {
-      // Only attach Google to an existing account when Google has confirmed
-      // this address - otherwise anyone holding an unconfirmed Google account
-      // for someone else's email could take over that person's account.
-      if (!googleVerifiedEmail) {
-        throw new AppError(
-          'GOOGLE_EMAIL_UNVERIFIED',
-          'An account with this email already exists. Sign in with your email and password.',
-          403
-        );
-      }
       customer.googleId = payload.sub;
       customer.authProvider = customer.authProvider === 'local' ? 'both' : 'google';
       if (googleVerifiedEmail && !customer.emailVerified) {
@@ -448,12 +419,10 @@ const google = asyncHandler(async (req, res) => {
   }
 
   if (!customer.emailVerified) {
-    // Google didn't confirm this address: verify it as part of sign-up.
-    // A fresh link is sent on each attempt, so the latest email always works.
-    await sendVerificationLink(customer, 'customer');
-    throw new AppError('EMAIL_NOT_VERIFIED', 'Check your email to finish signing up', 403, {
-      email: customer.email
-    });
+    // Rare: Google reported email_verified:false (e.g. unverified custom
+    // domain). Fall back to the normal verification requirement rather than
+    // letting an unverified address into an active account.
+    throw new AppError('EMAIL_NOT_VERIFIED', 'Account exists but email not verified', 403);
   }
 
   const tokens = await issueTokenPair({ id: customer._id, type: 'customer', role: 'customer' });
@@ -675,66 +644,7 @@ const changePassword = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { passwordChanged: true } });
 });
 
-/**
- * The signed-in customer or store owner deletes their own account. Confirmed
- * with the password, or the account's email for a Google-only customer.
- * A store owner's shop is closed for good. Personal details are held hidden
- * for six months, then wiped (see accountDeletion.service.js).
- * @route DELETE /auth/account
- * @access Private (customer, store_owner)
- * @body {string} [password]
- * @body {string} [confirmEmail]
- */
-const deleteAccount = asyncHandler(async (req, res) => {
-  const { password, confirmEmail } = req.body;
-  const { id, type, role } = req.auth;
-
-  if (role === 'super_admin') {
-    throw new AppError('ACCOUNT_DELETE_NOT_ALLOWED', 'Admin accounts cannot be deleted here', 403);
-  }
-
-  const account = await accountModel(type).findById(id);
-  if (!account || account.deletedAt) {
-    throw new AppError('ACCOUNT_NOT_FOUND', 'Account not found', 404);
-  }
-
-  if (account.passwordHash) {
-    if (!password) {
-      throw new AppError('CURRENT_PASSWORD_REQUIRED', 'Enter your password to delete your account', 400);
-    }
-    if (!(await bcrypt.compare(password, account.passwordHash))) {
-      throw new AppError('CURRENT_PASSWORD_INCORRECT', 'Password is incorrect', 400);
-    }
-  } else if (!confirmEmail || confirmEmail !== account.email) {
-    throw new AppError('DELETE_CONFIRMATION_MISMATCH', 'Type your email address exactly to confirm', 400);
-  }
-
-  const isStoreOwner = role === 'store_owner';
-  const { name, email } = account;
-  let closedStoreIds = [];
-  if (isStoreOwner) {
-    ({ closedStoreIds } = await deleteStoreOwnerAccount(account));
-  } else {
-    await deleteCustomerAccount(account);
-  }
-
-  // Audit entries are per store; a customer's deletion is recorded by its
-  // DeletedAccount document instead.
-  for (const storeId of closedStoreIds) {
-    await writeAuditLog({ actorUserId: id, storeId, action: 'store.closed_by_owner', target: String(storeId) });
-  }
-
-  try {
-    await sendEmail({ to: email, ...accountDeletedEmail({ name, isStoreOwner, retentionDays: RETENTION_DAYS }) });
-  } catch (err) {
-    console.error('Failed to send account deleted email:', err);
-  }
-
-  res.json({ success: true, data: { deleted: true, closedStoreCount: closedStoreIds.length } });
-});
-
 module.exports = {
-  deleteAccount,
   registerCustomer,
   verifyEmail,
   resendVerification,

@@ -9,7 +9,6 @@ const Reward = require('../rewards/reward.model');
 const Store = require('../stores/store.model');
 const Membership = require('../memberships/membership.model');
 const PointTransaction = require('../transactions/transaction.model');
-const Customer = require('../customers/customer.model');
 
 // A generated code is a long-lived voucher, not a short checkout window - it
 // stays redeemable for a year unless used first (fulfilling flips status to
@@ -25,8 +24,6 @@ const REDEMPTION_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000;
  * loyaltylabs-design-decisions memory #4. The points-balance check below is
  * a separate, always-enforced atomicity guarantee (can't go negative), not
  * the stock check the plan omitted.
- * Customers can earn points before verifying their email, but must verify
- * it before spending them here.
  * @route POST /redeem/initiate
  * @access Private (customer, rate-limited 5/min)
  * @body {string} rewardId
@@ -34,11 +31,6 @@ const REDEMPTION_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000;
 const initiate = asyncHandler(async (req, res) => {
   const { rewardId } = req.body;
   const customerId = req.auth.id;
-
-  const customer = await Customer.findById(customerId).select('emailVerified');
-  if (!customer || !customer.emailVerified) {
-    throw new AppError('EMAIL_NOT_VERIFIED', 'Verify your email address to redeem rewards', 403);
-  }
 
   if (!isValidObjectId(rewardId)) {
     throw new AppError('REWARD_NOT_FOUND', 'This reward is no longer available', 404);

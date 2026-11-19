@@ -4,11 +4,8 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { validateTillPin } = require('../../shared/services/validateTillPin');
 const { issueIdempotencyKey } = require('../../shared/services/issueIdempotencyKey');
 const { validateIdempotencyKey } = require('../../shared/services/validateIdempotencyKey');
-const { calculatePoints } = require('../../shared/services/calculatePoints');
+const { calculatePoints, applyPointsCap } = require('../../shared/services/calculatePoints');
 const writeAuditLog = require('../../shared/services/writeAuditLog');
-const { assertCanServeCustomer } = require('../billing/billing.service');
-const { notifyIfLimitJustReached } = require('../billing/billing.notifications');
-const { notifyPointsEarned } = require('./scan.notifications');
 
 const Customer = require('../customers/customer.model');
 const Store = require('../stores/store.model');
@@ -59,10 +56,6 @@ const identify = asyncHandler(async (req, res) => {
     throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
   }
 
-  // Plan limit is checked before the membership is created, so a refused
-  // customer doesn't leave a membership behind.
-  const existingMembership = await Membership.findOne({ customerId: customer._id, storeId: store._id });
-  await assertCanServeCustomer(store._id, existingMembership);
   const membership = await findOrCreateMembership(customer._id, store._id);
   const idempotencyKey = issueIdempotencyKey({ customerId: customer._id, storeId: store._id });
 
@@ -99,10 +92,6 @@ const identifyBySlug = asyncHandler(async (req, res) => {
     throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
   }
 
-  // Plan limit is checked before the membership is created, so a refused
-  // customer doesn't leave a membership behind.
-  const existingMembership = await Membership.findOne({ customerId: customer._id, storeId: store._id });
-  await assertCanServeCustomer(store._id, existingMembership);
   const membership = await findOrCreateMembership(customer._id, store._id);
   const idempotencyKey = issueIdempotencyKey({ customerId: customer._id, storeId: store._id });
 
@@ -153,6 +142,7 @@ const earn = asyncHandler(async (req, res) => {
       data: {
         newBalance: membership ? membership.pointsBalance : null,
         pointsAwarded: existing.points,
+        pointsCapApplied: existing.pointsCapApplied,
         duplicate: true
       }
     });
@@ -176,17 +166,18 @@ const earn = asyncHandler(async (req, res) => {
     throw new AppError('CUSTOMER_NOT_FOUND', 'Customer not found', 404);
   }
 
-  const pointsAwarded = calculatePoints(purchaseAmount, store.loyaltyProgram);
+  const rawPoints = calculatePoints(purchaseAmount, store.loyaltyProgram);
   let result;
 
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
       const membership = await findOrCreateMembership(customerId, store._id, session);
-      // Authoritative plan-limit check (identify only gives the till early warning).
-      const { addsActiveCustomer } = await assertCanServeCustomer(store._id, membership, session);
-      // No balance cap - every point earned is credited.
-      const newBalance = membership.pointsBalance + pointsAwarded;
+      const { pointsAwarded, pointsCapApplied, newBalance } = applyPointsCap(
+        membership.pointsBalance,
+        rawPoints,
+        store.loyaltyProgram.maxPointsBalance
+      );
 
       await Membership.updateOne(
         { _id: membership._id },
@@ -205,7 +196,8 @@ const earn = asyncHandler(async (req, res) => {
           idempotencyKeyExpiresAt: new Date(Date.now() + IDEMPOTENCY_WINDOW_MS),
           type: 'earn',
           points: pointsAwarded,
-          purchaseAmount
+          purchaseAmount,
+          pointsCapApplied
         }],
         { session }
       );
@@ -218,7 +210,7 @@ const earn = asyncHandler(async (req, res) => {
         );
       }
 
-      result = { newBalance, pointsAwarded, addsActiveCustomer };
+      result = { newBalance, pointsAwarded, pointsCapApplied };
     });
   } finally {
     session.endSession();
@@ -233,17 +225,7 @@ const earn = asyncHandler(async (req, res) => {
     metadata: { purchaseAmount, pointsAwarded: result.pointsAwarded }
   });
 
-  const { addsActiveCustomer, ...data } = result;
-  if (addsActiveCustomer) {
-    // This scan may have taken the shop to its limit: email the owner now,
-    // without holding up the till's response.
-    notifyIfLimitJustReached(store._id);
-  }
-
-  // Fire-and-forget: tell the customer what they just earned.
-  notifyPointsEarned({ customer, store, ...data });
-
-  res.json({ success: true, data });
+  res.json({ success: true, data: result });
 });
 
 /**

@@ -9,12 +9,8 @@ import Input from '../../shared/components/Input';
 import Button from '../../shared/components/Button';
 import Avatar from '../../shared/components/Avatar';
 import Icon from '../../shared/components/Icon';
-import Badge from '../../shared/components/Badge';
-import ToggleSwitch from '../../shared/components/ToggleSwitch';
-import VerifyEmailNotice from '../../shared/components/VerifyEmailNotice';
 import ChangePasswordCard from '../../shared/components/ChangePasswordCard';
 import SessionsCard from '../../shared/components/SessionsCard';
-import DeleteAccountCard from '../../shared/components/DeleteAccountCard';
 
 const AccountSettings = () => {
   const { user, refreshProfile } = useAuth();
@@ -24,24 +20,6 @@ const AccountSettings = () => {
   const [interests, setInterests] = useState(user?.interests || []);
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
-  // Customers created before this preference existed have no value: treat as on.
-  const [pointsEarnedEmails, setPointsEarnedEmails] = useState(user?.pointsEarnedEmails !== false);
-  const [isSavingEmailPref, setIsSavingEmailPref] = useState(false);
-
-  const handleEmailPrefChange = async (enabled) => {
-    setPointsEarnedEmails(enabled);
-    setIsSavingEmailPref(true);
-    try {
-      await customerApi.updateMe({ pointsEarnedEmails: enabled });
-      await refreshProfile();
-      showSuccessToast(enabled ? 'Points emails turned on.' : 'Points emails turned off.');
-    } catch (err) {
-      setPointsEarnedEmails(!enabled);
-      throw err;
-    } finally {
-      setIsSavingEmailPref(false);
-    }
-  };
 
   const hasChanges =
     name.trim() !== (user?.name || '') ||
@@ -76,17 +54,12 @@ const AccountSettings = () => {
       <p className="mt-1 text-body-sm text-text-secondary">Your details, password and signed-in devices.</p>
 
       <div className="mt-5 flex flex-col gap-4">
-        {user && !user.emailVerified && <VerifyEmailNotice email={user.email} />}
-
         <Card>
           <div className="flex items-center gap-3">
             <Avatar name={name || user?.name} size="lg" />
             <div className="min-w-0">
               <p className="truncate text-card-title text-text-primary">{name || user?.name}</p>
               <p className="truncate text-body-sm text-text-secondary">{user?.email}</p>
-              <Badge tone={user?.emailVerified ? 'success' : 'warning'} className="mt-1">
-                {user?.emailVerified ? 'Email verified' : 'Email not verified'}
-              </Badge>
             </div>
           </div>
 
@@ -157,29 +130,10 @@ const AccountSettings = () => {
           </form>
         </Card>
 
-        <Card>
-          <h2 className="text-card-title text-text-primary">Email notifications</h2>
-          <div className="mt-3">
-            <ToggleSwitch
-              label="Points earned emails"
-              checked={pointsEarnedEmails}
-              onChange={handleEmailPrefChange}
-              disabled={isSavingEmailPref}
-            />
-            <p className="mt-1 text-body-sm text-text-muted">
-              {user?.emailVerified
-                ? 'An email each time a shop adds points to your FuseCard.'
-                : 'An email each time a shop adds points to your FuseCard. Starts once your email is verified.'}
-            </p>
-          </div>
-        </Card>
-
         {/* Google-only customers have no password yet - they can set one. */}
         <ChangePasswordCard hasPassword={user?.authProvider !== 'google'} onPasswordChanged={refreshProfile} />
 
         <SessionsCard />
-
-        <DeleteAccountCard hasPassword={user?.authProvider !== 'google'} email={user?.email} />
       </div>
     </div>
   );

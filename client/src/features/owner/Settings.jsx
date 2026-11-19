@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import SegmentedControl from '../../shared/components/SegmentedControl';
 import StoreSettings from './StoreSettings';
 import LoyaltyConfig from './LoyaltyConfig';
@@ -16,12 +16,7 @@ const SECTIONS = [
 ];
 
 const Settings = () => {
-  // Section lives in the URL (?section=billing) so other screens, like the
-  // plan-limit banner, can link straight to it.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requested = searchParams.get('section');
-  const section = SECTIONS.some((option) => option.value === requested) ? requested : 'profile';
-  const setSection = (value) => setSearchParams({ section: value }, { replace: true });
+  const [section, setSection] = useState('profile');
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">

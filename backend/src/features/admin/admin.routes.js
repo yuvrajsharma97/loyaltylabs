@@ -12,7 +12,6 @@ router.use(requireAuth, requireRole('super_admin'));
 router.get('/stores', handler.listStores);
 router.patch('/stores/:id/status', validate(schemas.updateStoreStatusSchema), handler.updateStoreStatus);
 router.get('/metrics', handler.getMetrics);
-router.get('/reports/transactions', handler.getTransactionReport);
 router.get('/disputes', handler.listDisputes);
 router.post('/stores/:id/reconcile', validate(schemas.reconcileSchema), handler.reconcile);
 router.get('/customers', handler.listCustomers);

@@ -116,7 +116,6 @@ const AdminCustomerDetail = () => {
                   <div className="flex items-center gap-2">
                     <p className="truncate text-card-title text-text-primary">{membership.storeName}</p>
                     {membership.storeStatus === 'suspended' && <Badge tone="error">Suspended</Badge>}
-                    {membership.storeStatus === 'closed' && <Badge>Closed</Badge>}
                   </div>
                   <p className="text-body-sm text-text-muted">
                     Joined {formatDate(membership.joinedAt)} ·{' '}

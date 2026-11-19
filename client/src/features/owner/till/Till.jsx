@@ -338,6 +338,9 @@ const Till = () => {
         </h1>
         <p className="tabular-nums text-amount text-primary">+{earnResult.pointsAwarded} pts</p>
         <p className="tabular-nums text-body-sm text-text-secondary">New balance: {earnResult.newBalance} pts</p>
+        {earnResult.pointsCapApplied && (
+          <p className="text-body-sm text-warning-text">Points capped by this shop&apos;s balance limit.</p>
+        )}
         <Button onClick={resetToMenu}>Next customer</Button>
       </div>
     );

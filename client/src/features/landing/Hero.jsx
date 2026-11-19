@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom';
 // LandingPage.jsx). Sign in / Join sit separately on the right.
 const NAV_ITEMS = [
   { label: 'How it works', href: '#how' },
-  { label: 'Why go digital', href: '#digital' },
-  { label: 'For customers', href: '#wallet' },
+  { label: 'Rewards wallet', href: '#wallet' },
+  { label: 'For shops', href: '#shops' },
   { label: 'Pricing', href: '#pricing' },
 ];
 
@@ -220,31 +220,31 @@ const Hero = () => (
     <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pt-8 sm:px-6 sm:pt-10 md:px-8 md:pt-12 lg:px-10 lg:pt-14 xl:px-12 xl:pt-16 2xl:px-14">
       <div className="flex max-w-[1040px] flex-col items-center gap-3 text-center sm:gap-4 md:gap-5">
         <div className="flex flex-wrap items-center justify-center gap-2.5 text-[11.5px] font-semibold uppercase tracking-[.09em] text-text-muted">
-          <span>Go digital</span>
+          <span>Any shop, one code</span>
           <span className="h-1 w-1 rounded-full bg-border-strong" />
-          <span>Do more with loyalty</span>
+          <span>Nothing to carry</span>
           <span className="h-1 w-1 rounded-full bg-border-strong" />
           <span>Free for customers</span>
         </div>
         <h1 className="m-0 max-w-[15ch] text-balance text-[34px] font-semibold leading-none tracking-[-.032em] text-text-primary sm:text-[40px] md:text-[46px] lg:text-[56px] xl:text-[64px] 2xl:text-[72px]">
-          Turn first visits into <span className="text-primary">regulars.</span>
+          Get rewarded for <span className="text-primary">shopping local.</span>
         </h1>
         <p className="m-0 max-w-full text-pretty text-base leading-[1.55] text-text-secondary sm:max-w-[520px] md:max-w-[640px] md:text-[17px] lg:max-w-[740px] lg:text-lg xl:max-w-[820px] xl:text-[19px] 2xl:max-w-[860px]">
-          LoyaltyLabs is your whole loyalty programme in one place. Points and rewards on your customers&apos;
-          phones, rewards you can change in seconds, and a dashboard that shows what brings people back.
+          Collect points and stamps at the independent shops you already visit, then claim rewards from your
+          phone. Nothing to carry, nothing to download — sign up once and enjoy rewards every time you shop.
         </p>
         <div className="flex w-full flex-col items-stretch gap-3 pt-0.5 sm:w-auto sm:flex-row sm:items-center sm:justify-center">
           <Link
-            to="/sign-up?as=store"
+            to="/sign-up"
             className="inline-flex h-[52px] items-center justify-center rounded-[10px] bg-primary px-6 text-body font-semibold text-on-primary transition-colors duration-150 hover:bg-primary-hover"
           >
-            Start 6 weeks free
+            Join for free
           </Link>
           <Link
-            to="/sign-up"
+            to="/sign-up?as=store"
             className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[10px] border border-border-strong bg-surface px-5 text-body font-semibold text-text-primary transition-colors duration-150 hover:bg-canvas"
           >
-            I&apos;m a customer {ARROW_ICON}
+            I run a shop {ARROW_ICON}
           </Link>
         </div>
       </div>

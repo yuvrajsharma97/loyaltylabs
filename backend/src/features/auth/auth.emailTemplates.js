@@ -68,7 +68,7 @@ function verificationEmail({ name, url, expiresInHours = 24 }) {
     heading: 'Verify your email address',
     bodyHtml: `
       <p>Hi ${name},</p>
-      <p>Thanks for signing up for ${BRAND}. Confirm your email address to activate your account and get your FuseCard.</p>
+      <p>Thanks for signing up for ${BRAND}. Confirm your email address to activate your account and get your loyalty QR code.</p>
     `,
     ctaText: 'Verify email',
     ctaUrl: url,
@@ -98,11 +98,11 @@ function passwordResetEmail({ name, url, expiresInHours = 1 }) {
 function recoverAccountEmail({ name, url }) {
   const subject = `Recover your account access - ${BRAND}`;
   const html = renderShell({
-    preheader: 'Get back into your account and refresh your FuseCard.',
+    preheader: 'Get back into your account and refresh your loyalty QR code.',
     heading: 'Recover your account access',
     bodyHtml: `
       <p>Hi ${name},</p>
-      <p>Click below to sign back in to ${BRAND}. Once you're in, your FuseCard will refresh automatically.</p>
+      <p>Click below to sign back in to ${BRAND}. Once you're in, your loyalty QR code will refresh automatically.</p>
     `,
     ctaText: 'Sign back in',
     ctaUrl: url,
@@ -113,7 +113,7 @@ function recoverAccountEmail({ name, url }) {
 }
 
 function loginNotificationEmail({ name, timestamp }) {
-  const when = timestamp.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/London' });
+  const when = timestamp.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
   const subject = `New login to your ${BRAND} account`;
   const html = renderShell({
     preheader: `New sign-in on ${when}.`,
@@ -142,39 +142,4 @@ function welcomeEmail({ name }) {
   return { subject, html, text };
 }
 
-function accountDeletedEmail({ name, isStoreOwner, retentionDays }) {
-  const months = Math.round(retentionDays / 30.5);
-  const subject = `Your ${BRAND} account has been deleted`;
-  const shopLine = isStoreOwner
-    ? '<p>Your shop has been closed. Customers can no longer collect or spend points there, and billing has stopped.</p>'
-    : '<p>Your FuseCard no longer works and any unused reward codes have been cancelled.</p>';
-  const html = renderShell({
-    preheader: 'Your account is closed.',
-    heading: 'Your account has been deleted',
-    bodyHtml: `
-      <p>Hi ${name},</p>
-      <p>As you asked, we've deleted your ${BRAND} account and signed you out everywhere.</p>
-      ${shopLine}
-      <p>We keep your personal details hidden for up to ${months} months in case of a dispute, then delete them permanently.</p>
-    `,
-    footerNote: "If you didn't do this, reply to this email straight away."
-  });
-  const text = `Hi ${name},
-
-As you asked, we've deleted your ${BRAND} account and signed you out everywhere.
-
-We keep your personal details hidden for up to ${months} months in case of a dispute, then delete them permanently.
-
-If you didn't do this, reply to this email straight away.`;
-  return { subject, html, text };
-}
-
-module.exports = {
-  renderShell,
-  accountDeletedEmail,
-  verificationEmail,
-  passwordResetEmail,
-  recoverAccountEmail,
-  loginNotificationEmail,
-  welcomeEmail
-};
+module.exports = { verificationEmail, passwordResetEmail, recoverAccountEmail, loginNotificationEmail, welcomeEmail };

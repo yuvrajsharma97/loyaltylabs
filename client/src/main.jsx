@@ -8,7 +8,7 @@ import { showErrorToast } from './shared/utils/toast';
 import './index.css';
 
 // Screens only catch the API errors they have a specific UI for (e.g.
-// EMAIL_NOT_VERIFIED); every other failed request surfaces here as a toast rather
+// QR_NOT_ISSUED); every other failed request surfaces here as a toast rather
 // than failing silently. apiClient normalises errors to carry `code`.
 window.addEventListener('unhandledrejection', (event) => {
   const error = event.reason;

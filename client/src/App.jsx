@@ -10,7 +10,6 @@ const SignUpPage = lazy(() => import('./features/auth/SignUpPage'));
 const VerifyEmailPage = lazy(() => import('./features/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage'));
 const AdminSignInPage = lazy(() => import('./features/auth/AdminSignInPage'));
-const PrivacyPolicy = lazy(() => import('./features/legal/PrivacyPolicy'));
 const CustomerOnboarding = lazy(() => import('./features/onboarding/CustomerOnboarding'));
 const StoreOnboarding = lazy(() => import('./features/onboarding/StoreOnboarding'));
 const CustomerShell = lazy(() => import('./features/customer/CustomerShell'));
@@ -34,7 +33,6 @@ const AdminDisputes = lazy(() => import('./features/admin/AdminDisputes'));
 const AdminCustomers = lazy(() => import('./features/admin/AdminCustomers'));
 const AdminCustomerDetail = lazy(() => import('./features/admin/AdminCustomerDetail'));
 const AdminHealth = lazy(() => import('./features/admin/AdminHealth'));
-const AdminTransactions = lazy(() => import('./features/admin/AdminTransactions'));
 
 function isStoreFullyOnboarded(store) {
   const steps = store?.onboardingCompleted;
@@ -77,7 +75,6 @@ const App = () => {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/admin/login" element={<AdminSignInPage />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
 
         <Route
           path="/onboarding/customer"
@@ -141,7 +138,6 @@ const App = () => {
           <Route index element={<Navigate to="stats" replace />} />
           <Route path="stats" element={<AdminOverview />} />
           <Route path="stores" element={<AdminStores />} />
-          <Route path="transactions" element={<AdminTransactions />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="customers/:id" element={<AdminCustomerDetail />} />
           <Route path="disputes" element={<AdminDisputes />} />

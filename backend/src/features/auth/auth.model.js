@@ -13,9 +13,7 @@ const userSchema = new mongoose.Schema({
   emailVerificationToken: { type: String }, // hashed; cleared after use
   emailVerificationExpiresAt: { type: Date },
   passwordResetToken: { type: String }, // hashed; cleared after use
-  passwordResetExpiresAt: { type: Date },
-  // Set when a store owner deletes their account (record kept, anonymised).
-  deletedAt: { type: Date, default: null }
+  passwordResetExpiresAt: { type: Date }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 module.exports = mongoose.model('User', userSchema);

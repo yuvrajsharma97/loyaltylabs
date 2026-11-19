@@ -3,7 +3,6 @@ import AppShell from '../../shared/components/AppShell';
 import { useAuth } from '../../shared/hooks/useAuth';
 import Icon from '../../shared/components/Icon';
 import IconButton from '../../shared/components/IconButton';
-import PlanLimitBanner from './PlanLimitBanner';
 
 const NAV_ITEMS = [
   { to: '/store/overview', icon: 'dashboard', label: 'Overview' },
@@ -40,9 +39,6 @@ const OwnerShell = () => {
         </div>
       }
     >
-      <div className="px-4">
-        <PlanLimitBanner />
-      </div>
       <Outlet />
     </AppShell>
   );
