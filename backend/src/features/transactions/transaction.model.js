@@ -19,7 +19,7 @@ const pointTransactionSchema = new mongoose.Schema({
   tillPin: { type: String, default: null },
   // 'qr_scan' - static QR lookup (no TOTP, see design decisions memory); 'slug_manual' - camera-fail fallback.
   verificationMethod: { type: String, enum: ['qr_scan', 'slug_manual'], default: null },
-  idempotencyKey: { type: String, index: true, sparse: true },
+  idempotencyKey: { type: String },
   idempotencyKeyExpiresAt: { type: Date, default: null },
   type: {
     type: String,
@@ -34,5 +34,18 @@ const pointTransactionSchema = new mongoose.Schema({
 
 pointTransactionSchema.index({ customerId: 1, storeId: 1, createdAt: -1 });
 pointTransactionSchema.index({ storeId: 1, createdAt: -1 });
+
+// One ledger entry per idempotency key, enforced by the database so two
+// simultaneous /scan/earn requests can't both award points. Partial (not
+// sparse) so entries written without a key - redemptions, adjustments,
+// expiries - are left out of the index entirely.
+pointTransactionSchema.index(
+  { idempotencyKey: 1 },
+  {
+    name: 'idempotencyKey_unique',
+    unique: true,
+    partialFilterExpression: { idempotencyKey: { $type: 'string' } }
+  }
+);
 
 module.exports = mongoose.model('PointTransaction', pointTransactionSchema);

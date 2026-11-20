@@ -27,6 +27,26 @@ async function findOrCreateMembership(customerId, storeId, session) {
   return membership;
 }
 
+function isDuplicateIdempotencyKeyError(err) {
+  return err?.code === 11000 && Boolean(err.keyPattern?.idempotencyKey || err.keyValue?.idempotencyKey);
+}
+
+// Safe retry - the earn already happened, so return the original result
+// rather than re-processing (the till treats this as a normal success).
+async function sendDuplicateEarn(res, original, customerId, storeId) {
+  const membership = await Membership.findOne({ customerId, storeId });
+  return res.json({
+    success: true,
+    code: 'DUPLICATE_TRANSACTION',
+    data: {
+      newBalance: membership ? membership.pointsBalance : null,
+      pointsAwarded: original.points,
+      pointsCapApplied: original.pointsCapApplied,
+      duplicate: true
+    }
+  });
+}
+
 function assertStoreActive(store) {
   if (store.status !== 'active') {
     throw new AppError('STORE_NOT_ACTIVE', 'This store account is suspended - contact support', 403);
@@ -131,21 +151,12 @@ const earn = asyncHandler(async (req, res) => {
     throw new AppError('IDEMPOTENCY_KEY_INVALID', "Session error - please scan the customer's QR again", 400);
   }
 
+  // Fast path for an ordinary retry. Not race-safe on its own - two
+  // simultaneous requests can both get past it - so the unique index on
+  // idempotencyKey is the real guard (see the duplicate-key catch below).
   const existing = await PointTransaction.findOne({ idempotencyKey });
   if (existing) {
-    // Safe retry - the earn already happened, return the original result
-    // rather than re-processing (till treats this as a normal success).
-    const membership = await Membership.findOne({ customerId, storeId: store._id });
-    return res.json({
-      success: true,
-      code: 'DUPLICATE_TRANSACTION',
-      data: {
-        newBalance: membership ? membership.pointsBalance : null,
-        pointsAwarded: existing.points,
-        pointsCapApplied: existing.pointsCapApplied,
-        duplicate: true
-      }
-    });
+    return sendDuplicateEarn(res, existing, customerId, store._id);
   }
 
   if (expired) {
@@ -212,6 +223,16 @@ const earn = asyncHandler(async (req, res) => {
 
       result = { newBalance, pointsAwarded, pointsCapApplied };
     });
+  } catch (err) {
+    // Another request with the same key committed first. The transaction
+    // rolled back, so nothing was credited twice - answer like a retry.
+    if (isDuplicateIdempotencyKeyError(err)) {
+      const original = await PointTransaction.findOne({ idempotencyKey });
+      if (original) {
+        return sendDuplicateEarn(res, original, customerId, store._id);
+      }
+    }
+    throw err;
   } finally {
     session.endSession();
   }

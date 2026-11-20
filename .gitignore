@@ -62,3 +62,7 @@ notforgit/
 
 # Claude
 .claude
+
+# Agent skills (local only)
+.agents/skills/security-review/
+skills-lock.json
